@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MENU_ITEMS } from "@/config/menuItems";
+import { MENU_ITEMS } from "@/config/MenuItems";
 import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 
 const Sidebar = ({ isMenuOpen }) => {
