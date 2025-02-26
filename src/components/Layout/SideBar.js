@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MENU_ITEMS } from "@/config/menuItems";
+import { MENU_ITEMS } from "@/config/MenuItems";
 import { FaChevronDown, FaChevronRight } from "react-icons/fa";
+import { filterMenuItems } from "@/utils/menuFilter"; // Adjust path
 
 const Sidebar = ({ isMenuOpen }) => {
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
+
+  // Fetch user roles from localStorage on mount
+  useEffect(() => {
+    const authData = JSON.parse(localStorage.getItem("auth-store") || "{}");
+    const userRoles = authData?.user?.role || []; // roles is an array, e.g., ["EMPLOYEE"] or ["ADMIN"]
+    const filtered = filterMenuItems(MENU_ITEMS, userRoles);
+    setFilteredItems(filtered);
+  }, []);
 
   const toggleExpand = (itemId) => {
     setExpandedItems((prev) =>
@@ -70,7 +80,6 @@ const Sidebar = ({ isMenuOpen }) => {
                       : "text-[#555] hover:text-[#1672EE]"}
                   `}
                 >
-                  {/* Render sub-item icon */}
                   {subItem.icon && (
                     <span className="text-[#1672EE]">
                       <subItem.icon size={18} />
@@ -93,7 +102,7 @@ const Sidebar = ({ isMenuOpen }) => {
       }`}
     >
       <nav className="flex-1 p-2 space-y-2 overflow-y-auto">
-        {MENU_ITEMS.map((menu) => renderMenuItem(menu))}
+        {filteredItems.map((menu) => renderMenuItem(menu))}
       </nav>
     </aside>
   );

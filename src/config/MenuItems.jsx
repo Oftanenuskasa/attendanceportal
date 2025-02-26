@@ -1,24 +1,13 @@
+// config/MenuItems.js
 import {
   FiGrid,
-  FiDollarSign,
-  FiClock,
-  FiPackage,
   FiSettings,
   FiList,
   FiUserPlus,
-  FiDownload,
-  FiCamera,
   FiEye,
   FiUserCheck,
 } from "react-icons/fi";
-import {
-  FaSchool,
-  FaRegPlusSquare,
-  FaUser,
-  FaUsers,
-  FaCalendarCheck,
-  FaQrcode,
-} from "react-icons/fa";
+import { FaUsers, FaCalendarCheck } from "react-icons/fa";
 
 export const MENU_ITEMS = [
   {
@@ -26,28 +15,28 @@ export const MENU_ITEMS = [
     icon: FiGrid,
     label: "Dashboard",
     href: "/dashboard",
-    roles: "",
+    roles: "", // Accessible to all
   },
   {
     id: "employee",
     icon: FaUsers,
     label: "Employee",
     href: "/employee",
-    roles: "",
+    roles: "ADMIN", // Only admins
     subItems: [
       {
         id: "employee_List",
         icon: FiList,
         label: "Employee List",
         href: "/employee",
-        roles: "",
+        roles: "ADMIN",
       },
       {
         id: "addEmployee",
         icon: FiUserPlus,
         label: "Add Employee",
         href: "/employee/addemployee",
-        roles: "",
+        roles: "ADMIN",
       },
     ],
   },
@@ -56,28 +45,28 @@ export const MENU_ITEMS = [
     icon: FaCalendarCheck,
     label: "Attendance",
     href: "/attendance",
-    roles: "",
+    roles: "", // Accessible to all
     subItems: [
       {
         id: "mark",
-        icon: FiUserCheck,   
+        icon: FiUserCheck,
         label: "Mark Attendance",
         href: "/attendance",
-        roles: "",
+        roles: "", // Accessible to all
       },
       {
         id: "list",
         icon: FiList,
         label: "Attendance List",
         href: "/attendance/list",
-        roles: "",
+        roles: "ADMIN", // Only admins
       },
       {
         id: "view",
         icon: FiEye,
         label: "View Attendance",
         href: "/attendance/view",
-        roles: "",
+        roles: "", // Accessible to all
       },
     ],
   },
@@ -86,25 +75,25 @@ export const MENU_ITEMS = [
     icon: FiSettings,
     label: "Settings",
     href: "/setting",
-    roles: "",
+    roles: "ADMIN", // Only admins
     subItems: [
       {
         id: "system",
         label: "System Setting",
         href: "/setting/system",
-        roles: "",
+        roles: "ADMIN",
       },
       {
         id: "about",
         label: "About",
         href: "/setting/about",
-        roles: "",
+        roles: "ADMIN",
       },
       {
         id: "contact",
         label: "Contact",
         href: "/setting/contact",
-        roles: "",
+        roles: "ADMIN",
       },
     ],
   },

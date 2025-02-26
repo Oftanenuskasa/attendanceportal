@@ -1,22 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { UserCheck } from "lucide-react"; // Import UserCheck icon
+import { UserCheck } from "lucide-react";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export default function Attendance() {
   const [name, setName] = useState("");
   const [department, setDepartment] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(""); // Will be overridden by time check
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = (e) => {
+  // Load user data on mount
+  useEffect(() => {
+    const authData = JSON.parse(localStorage.getItem("auth-store"));
+    if (!authData || !authData.user) {
+      router.push("/login");
+    } else {
+      setName(authData.user.name);
+    }
+  }, [router]);
+
+  // Function to check if current time is within 8:30 AM - 9:00 AM EAT (Ethiopian local time)
+  const isWithinAttendanceWindow = () => {
+    // Use Ethiopian local time (UTC+3)
+    const now = new Date();
+    const ethiopianTime = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Addis_Ababa" }));
+    const hours = ethiopianTime.getHours();
+    const minutes = ethiopianTime.getMinutes();
+
+    // Convert current time to minutes since midnight
+    const currentMinutes = hours * 60 + minutes;
+
+    // Attendance window: 8:30 AM - 9:00 AM EAT
+    const startWindow = 8 * 60 + 30; // 8:30 AM = 510 minutes
+    const endWindow = 9 * 60; // 9:00 AM = 540 minutes
+
+    return currentMinutes >= startWindow && currentMinutes <= endWindow;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Add your submission logic here (e.g., saving to state or API call)
-    console.log({ name, department, status });
-    // Reset form fields
-    setName("");
-    setDepartment("");
-    setStatus("");
+    setLoading(true);
+
+    const authData = JSON.parse(localStorage.getItem("auth-store"));
+    if (!authData || !authData.token) {
+      router.push("/login");
+      return;
+    }
+
+    // Determine status based on time
+    const determinedStatus = isWithinAttendanceWindow() ? "Present" : "Absent";
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/employees/attendance",
+        { name, department, status: determinedStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${authData.token}`,
+          },
+        }
+      );
+
+      console.log("Attendance marked:", response.data);
+      alert(`Attendance marked as ${determinedStatus} successfully!`);
+      setDepartment("");
+      setStatus(""); // Reset status (though it’s overridden)
+    } catch (error) {
+      console.error(error);
+      const message = error.response?.data?.message || "An error occurred";
+      alert(message);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("auth-store");
+        router.push("/login");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,6 +104,7 @@ export default function Attendance() {
                 placeholder="Enter your name"
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                 required
+                disabled
               />
             </div>
             <div className="space-y-2">
@@ -52,36 +116,36 @@ export default function Attendance() {
                 required
               >
                 <option value="">Select Department</option>
-                <option value="Quality Control">Quality Control</option>
-                <option value="Production">Production</option>
-                <option value="R&D">R&D</option>
-                <option value="HR">HR</option>
-                <option value="IT">IT</option>
+                <option value="Quality Control">Quality Control and Assurance</option>
+                <option value="Production">Methodology and Standard</option>
+                <option value="R&D">NID Project</option>
               </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                required
-              >
-                <option value="">Select Status</option>
-                <option value="Present">Present</option>
-                <option value="Late">Late</option>
-                <option value="Work From Home">Work From Home</option>
-                <option value="On Leave">On Leave</option>
-              </select>
+              <input
+                type="text"
+                value={isWithinAttendanceWindow() ? "Present" : "Absent"}
+                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
+                disabled
+              />
+              <p className="text-sm text-gray-500">
+                {isWithinAttendanceWindow()
+                  ? "Within 8:30 AM - 9:00 AM window (EAT)"
+                  : "Outside attendance window (EAT)"}
+              </p>
             </div>
           </div>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+            disabled={loading}
+            className={`w-full md:w-auto px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 ${
+              loading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            Submit Attendance
+            {loading ? "Submitting..." : "Submit Attendance"}
           </motion.button>
         </form>
       </motion.div>

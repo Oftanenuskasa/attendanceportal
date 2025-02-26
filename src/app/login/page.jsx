@@ -25,30 +25,30 @@ const Login = ({ setLogin }) => {
         console.log("username and password ", username, password);
         
         const response = await axios.post(
-            "",
+            "http://localhost:5000/api/employees/login",
             { username, password }
           );
 
           if(response.status === 200){
-            let user={
+            const user={
+                firstName: response.data.firstName,
+                middleName: response.data.middleName,
+                lastName: response.data.lastName,
                 name: response.data.username,
                 email: response.data.email,
                 role: response.data.roles,
                 employeeId: response.data.employeeId,
-              }
-            //   user=JSON.stringify(user);
-            //   const token=JSON.stringify(response.data.token);
-            const token=response.data.token;
-
-              const data=JSON.stringify({token:token, user:user});
-            
-            localStorage.setItem("auth-store", data);
-            console.log(response.data);
-            router.push("/dashboard");
+                photo: response.data.photo,
+              };
+              const token=response.data.token;
+              localStorage.setItem("auth-store", JSON.stringify({ token, user }));
+              console.log("Login successful:", response.data);
+              router.push("/dashboard");
         }
         
     } catch (error) {
-        console.log(error);
+      console.log(error);
+      alert(error.response?.data?.message || "Login failed");
     }
 
   };

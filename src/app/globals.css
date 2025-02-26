@@ -1,3 +1,11 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.dark {
+  --background: #1f2937; /* gray-800 */
+  --foreground: #f3f4f6; /* gray-200 */
+}
+
+

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+"use client";
 
+import { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import {
@@ -19,8 +20,9 @@ import {
   FileSpreadsheet,
   FileText,
   ArrowUpDown
-  
 } from 'lucide-react';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 const AttendanceList = () => {
   const [attendanceData, setAttendanceData] = useState([]);
@@ -28,26 +30,46 @@ const AttendanceList = () => {
   const [globalFilter, setGlobalFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [searchType, setSearchType] = useState('general'); 
+  const [searchType, setSearchType] = useState('general');
   const [searchDate, setSearchDate] = useState('');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [employeeId, setEmployeeId] = useState('');
+  const router = useRouter();
+
+  // Get token from localStorage
+  const getAuthToken = () => {
+    const authData = JSON.parse(localStorage.getItem("auth-store"));
+    return authData?.token || null;
+  };
 
   useEffect(() => {
-    fetchAttendanceData();
-  }, []);
+    const token = getAuthToken();
+    if (!token) {
+      router.push('/login');
+    } else {
+      fetchAttendanceData();
+    }
+  }, [router]);
 
   const fetchAttendanceData = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('');
-      const data = await response.json();
-      setAttendanceData(data);
+      const token = getAuthToken();
+      const response = await axios.get('http://localhost:5000/api/employees/attendance', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAttendanceData(response.data);
     } catch (error) {
       console.error('Error fetching attendance data:', error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("auth-store");
+        router.push('/login');
+      }
     } finally {
       setLoading(false);
     }
   };
+
   const fetchAttendanceByDate = async () => {
     if (!employeeId || !searchDate) {
       alert('Please enter both Employee ID and Date');
@@ -55,30 +77,42 @@ const AttendanceList = () => {
     }
     setLoading(true);
     try {
-      const response = await fetch(``);
-      const data = await response.json();
-      setAttendanceData(data);
+      const token = getAuthToken();
+      const response = await axios.get(
+        `http://localhost:5000/api/employees/attendance/date?employeeId=${employeeId}&date=${searchDate}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAttendanceData(response.data);
     } catch (error) {
       console.error('Error fetching attendance by date:', error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("auth-store");
+        router.push('/login');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchAttendanceHistory = async () => {
-    if (!staffId || !dateRange.startDate || !dateRange.endDate) {
+    if (!employeeId || !dateRange.startDate || !dateRange.endDate) {
       alert('Please enter Employee ID and both dates');
       return;
     }
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/attendance/history/${staffId}?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+      const token = getAuthToken();
+      const response = await axios.get(
+        `http://localhost:5000/api/employees/attendance/history?employeeId=${employeeId}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      const data = await response.json();
-      setAttendanceData(data);
+      setAttendanceData(response.data);
     } catch (error) {
       console.error('Error fetching attendance history:', error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("auth-store");
+        router.push('/login');
+      }
     } finally {
       setLoading(false);
     }
@@ -104,27 +138,10 @@ const AttendanceList = () => {
   };
 
   const columns = [
-    {
-      header: '#',
-      cell: (info) => info.row.index + 1,
-      size: 60,
-    },
-    {
-      header: 'Employee ID',
-      accessorFn: (row) => row.employee?.employeeId || 'N/A',
-    },
-    {
-      header: 'Name',
-      accessorKey: 'name',
-    },
-    {
-        header: 'Department',
-        accessorKey: 'department',
-    },
-    {
-        header: 'Time',
-        accessorKey: 'time',
-    },
+    { header: '#', cell: (info) => info.row.index + 1, size: 60 },
+    { header: 'Employee ID', accessorFn: (row) => row.employeeId?._id || 'N/A' },
+    { header: 'Name', accessorKey: 'name' },
+    { header: 'Department', accessorKey: 'department' },
     {
       header: 'Date',
       accessorKey: 'date',
@@ -133,27 +150,13 @@ const AttendanceList = () => {
         return date ? new Date(date).toLocaleDateString() : 'N/A';
       },
     },
-    {
-      header: 'Attendance Status',
-      accessorKey: 'status',
-    },
-    {
-      header: 'Recorded By',
-      accessorKey: 'recordedBy',
-    },
-    {
-      header: 'Remark',
-      accessorKey: 'remark',
-    },
+    { header: 'Attendance Status', accessorKey: 'status' },
   ];
 
   const table = useReactTable({
     data: attendanceData,
     columns,
-    state: {
-      sorting,
-      globalFilter,
-    },
+    state: { sorting, globalFilter },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
@@ -162,50 +165,31 @@ const AttendanceList = () => {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-
   const exportToPDF = () => {
     if (attendanceData.length === 0) {
       alert("No records available to export.");
-      return; // Exit the function
+      return;
     }
     const doc = new jsPDF();
-
-    // Add Title
     doc.setFontSize(16);
     doc.text('Employee Attendance Records', 14, 20);
-
-    // Define table headers and data
     const headers = columns.map(col => col.header);
     const rows = table.getFilteredRowModel().rows.map(row => 
-      row.getVisibleCells().map(cell =>
-        flexRender(cell.column.columnDef.cell, cell.getContext())
-      )
+      row.getVisibleCells().map(cell => flexRender(cell.column.columnDef.cell, cell.getContext()))
     );
-
-    // Add the table to the PDF
-    doc.autoTable({
-      startY: 30,
-      head: [headers],
-      body: rows,
-      theme: 'grid',
-    });
-
-    // Save the PDF
+    doc.autoTable({ startY: 30, head: [headers], body: rows, theme: 'grid' });
     doc.save('attendance_records.pdf');
   };
 
   const exportToExcel = () => {
     if (attendanceData.length === 0) {
       alert("No records available to export.");
-      return; // Exit the function
+      return;
     }
     const headers = columns.map(col => col.header).join('\t');
-    const rows = table.getFilteredRowModel().rows.map(row => {
-      return row.getVisibleCells().map(cell => 
-        flexRender(cell.column.columnDef.cell, cell.getContext())
-      ).join('\t');
-    }).join('\n');
-    
+    const rows = table.getFilteredRowModel().rows.map(row => 
+      row.getVisibleCells().map(cell => flexRender(cell.column.columnDef.cell, cell.getContext())).join('\t')
+    ).join('\n');
     const content = `${headers}\n${rows}`;
     const blob = new Blob([content], { type: 'application/vnd.ms-excel' });
     const url = window.URL.createObjectURL(blob);
@@ -219,15 +203,12 @@ const AttendanceList = () => {
   const exportToCSV = () => {
     if (attendanceData.length === 0) {
       alert("No records available to export.");
-      return; // Exit the function
+      return;
     }
     const headers = columns.map(col => col.header).join(',');
-    const rows = table.getFilteredRowModel().rows.map(row => {
-      return row.getVisibleCells().map(cell => 
-        `"${flexRender(cell.column.columnDef.cell, cell.getContext())}"`
-      ).join(',');
-    }).join('\n');
-    
+    const rows = table.getFilteredRowModel().rows.map(row => 
+      row.getVisibleCells().map(cell => `"${flexRender(cell.column.columnDef.cell, cell.getContext())}"`).join(',')
+    ).join('\n');
     const content = `${headers}\n${rows}`;
     const blob = new Blob([content], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -241,16 +222,13 @@ const AttendanceList = () => {
   const print = () => {
     if (attendanceData.length === 0) {
       alert("No records available to export.");
-      return; // Exit the function
+      return;
     }
     const printWindow = window.open('', '_blank');
     const headers = columns.map(col => col.header);
     const rows = table.getFilteredRowModel().rows.map(row => 
-      row.getVisibleCells().map(cell => 
-        flexRender(cell.column.columnDef.cell, cell.getContext())
-      )
+      row.getVisibleCells().map(cell => flexRender(cell.column.columnDef.cell, cell.getContext()))
     );
-
     printWindow.document.write(`
       <html>
         <head>
@@ -259,36 +237,22 @@ const AttendanceList = () => {
             table { border-collapse: collapse; width: 100%; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             th { background-color: #f5f5f5; }
-            @media print {
-              body { margin: 0; padding: 20px; }
-              h1 { margin-bottom: 20px; }
-            }
+            @media print { body { margin: 0; padding: 20px; } h1 { margin-bottom: 20px; } }
           </style>
         </head>
         <body>
-          <h1>Staff Attendance Records</h1>
+          <h1>Employee Attendance Records</h1>
           <table>
-            <thead>
-              <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
-            </thead>
-            <tbody>
-              ${rows.map(row => `
-                <tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>
-              `).join('')}
-            </tbody>
+            <thead><tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr></thead>
+            <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
           </table>
         </body>
       </html>
     `);
-    
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
   };
-
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen mt-12">
@@ -296,7 +260,6 @@ const AttendanceList = () => {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold text-gray-800">Employee Attendance Records</h1>
           <div className="flex gap-2 relative">
-            {/* Export dropdown */}
             <div className="relative">
               <button 
                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
@@ -309,20 +272,16 @@ const AttendanceList = () => {
               {showExportMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 text-black">
                   <button onClick={exportToExcel} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50">
-                    <FileSpreadsheet size={16} />
-                    <span>Export to Excel</span>
+                    <FileSpreadsheet size={16} /> <span>Export to Excel</span>
                   </button>
                   <button onClick={exportToCSV} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50">
-                    <FileText size={16} />
-                    <span>Export to CSV</span>
+                    <FileText size={16} /> <span>Export to CSV</span>
                   </button>
                   <button onClick={exportToPDF} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50">
-                    <FileText size={16} />
-                    <span>Export to PDF</span>
+                    <FileText size={16} /> <span>Export to PDF</span>
                   </button>
                   <button onClick={print} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50">
-                    <Printer size={16} />
-                    <span>Print</span>
+                    <Printer size={16} /> <span>Print</span>
                   </button>
                 </div>
               )}
@@ -345,9 +304,9 @@ const AttendanceList = () => {
             {searchType !== 'general' && (
               <input
                 type="text"
-                value={staffId}
+                value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
-                placeholder="Enter  employee ID"
+                placeholder="Enter Employee ID"
                 className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             )}
@@ -415,7 +374,8 @@ const AttendanceList = () => {
 
         {loading ? (
           <div className="text-center py-4">Loading...</div>
-        ) : attendanceData.length === 0 ? (  <div className="text-center py-4 text-black">No records available.</div>
+        ) : attendanceData.length === 0 ? (
+          <div className="text-center py-4 text-black">No records available.</div>
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -450,10 +410,7 @@ const AttendanceList = () => {
                 </thead>
                 <tbody>
                   {table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b hover:bg-gray-50 transition-colors"
-                    >
+                    <tr key={row.id} className="border-b hover:bg-gray-50 transition-colors">
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className="px-4 py-3 text-sm text-gray-700">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -497,9 +454,7 @@ const AttendanceList = () => {
                 </button>
                 <select
                   value={table.getState().pagination.pageSize}
-                  onChange={e => {
-                    table.setPageSize(Number(e.target.value))
-                  }}
+                  onChange={e => table.setPageSize(Number(e.target.value))}
                   className="px-3 py-1 border rounded text-black"
                 >
                   {[5, 10, 20, 30, 40, 50].map(pageSize => (
@@ -510,8 +465,7 @@ const AttendanceList = () => {
                 </select>
               </div>
               <span className="text-sm text-black">
-                Page {table.getState().pagination.pageIndex + 1} of{' '}
-                {table.getPageCount()}
+                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
               </span>
             </div>
           </>
