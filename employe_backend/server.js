@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 
 // Middleware
-const allowedOrigins = ['https://quality-attendance-4nx2282t4-oftanenus-kasa.vercel.app']; // Add your Vercel frontend domain
+const allowedOrigins = ['https://quality-attendance.vercel.app/']; // Add your Vercel frontend domain
 const corsOptions = {
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], // Allow specific HTTP methods if needed
