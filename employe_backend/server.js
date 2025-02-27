@@ -9,7 +9,14 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(cors());
+const allowedOrigins = ['https://quality-attendance-4nx2282t4-oftanenus-kasa.vercel.app']; // Add your Vercel frontend domain
+const corsOptions = {
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], // Allow specific HTTP methods if needed
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allow headers that your frontend sends
+};
+
+app.use(cors(corsOptions));  // Use the configured CORS options
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
