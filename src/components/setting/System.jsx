@@ -11,7 +11,7 @@ const SystemSettings = () => {
 
   const handleSave = async () => {
     try {
-      await axios.post("http://localhost:5000/api/employees/settings", {
+      await axios.post("https://attendanceportal-3.onrender.com/api/employees/settings", {
         attendanceWindow: { startTime, endTime },
         departments,
       });

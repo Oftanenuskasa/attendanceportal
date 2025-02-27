@@ -55,7 +55,7 @@ const AttendanceList = () => {
     setLoading(true);
     try {
       const token = getAuthToken();
-      const response = await axios.get('http://localhost:5000/api/employees/attendance', {
+      const response = await axios.get('https://attendanceportal-3.onrender.com/api/employees/attendance', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAttendanceData(response.data);
@@ -79,7 +79,7 @@ const AttendanceList = () => {
     try {
       const token = getAuthToken();
       const response = await axios.get(
-        `http://localhost:5000/api/employees/attendance/date?employeeId=${employeeId}&date=${searchDate}`,
+        `https://attendanceportal-3.onrender.com/api/employees/attendance/date?employeeId=${employeeId}&date=${searchDate}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAttendanceData(response.data);
@@ -103,7 +103,7 @@ const AttendanceList = () => {
     try {
       const token = getAuthToken();
       const response = await axios.get(
-        `http://localhost:5000/api/employees/attendance/history?employeeId=${employeeId}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
+        `https://attendanceportal-3.onrender.com/api/employees/attendance/history?employeeId=${employeeId}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAttendanceData(response.data);

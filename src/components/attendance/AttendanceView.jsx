@@ -73,7 +73,7 @@ const AttendanceHistory = () => {
       }
 
       const dateToFetch = filters.date || new Date().toISOString().split('T')[0]; // Default to today
-      const url = `http://localhost:5000/api/employees/attendance/date?employeeId=${filters.employeeId || ''}&date=${dateToFetch}`;
+      const url = `https://attendanceportal-3.onrender.com/api/employees/attendance/date?employeeId=${filters.employeeId || ''}&date=${dateToFetch}`;
 
       const response = await axios.get(url, {
         headers: {

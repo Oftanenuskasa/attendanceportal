@@ -16,7 +16,7 @@ import {
 const EmployeeModal = ({ employee, onClose }) => {
   if (!employee) return null;
 
-  const BASE_URL = "http://localhost:5000"; // Adjust if your backend URL differs
+  const BASE_URL = "https://attendanceportal-3.onrender.com"; // Adjust if your backend URL differs
 
   const formatDate = (dateString) => {
     if (!dateString) return "Not set";

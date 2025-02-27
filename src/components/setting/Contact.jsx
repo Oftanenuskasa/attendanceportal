@@ -11,7 +11,7 @@ const ContactSupport = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5000/api/employees/support", { subject, message });
+      await axios.post("https://attendanceportal-3.onrender.com/api/employees/support", { subject, message });
       alert("Message sent to support!");
       setSubject("");
       setMessage("");
@@ -31,7 +31,7 @@ const ContactSupport = () => {
       <div className="space-y-6">
         <div>
           <p><strong>Email:</strong> support@company.com</p>
-          <p><strong>Phone:</strong> +251-911-123-4567</p>
+          <p><strong>Phone:</strong> +251902667353</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

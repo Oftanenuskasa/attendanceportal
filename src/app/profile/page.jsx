@@ -22,7 +22,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const router = useRouter();
-  const BASE_URL = "http://localhost:5000"; // Backend base URL
+  const BASE_URL = "https://attendanceportal-3.onrender.com"; // Backend base URL
 
   // Fetch profile data
   useEffect(() => {

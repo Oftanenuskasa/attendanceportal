@@ -54,7 +54,7 @@ export default function EmployeList() {
         return;
       }
 
-      const response = await axios.get("http://localhost:5000/api/employees", {
+      const response = await axios.get("https://attendanceportal-3.onrender.com/api/employees", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -103,7 +103,7 @@ export default function EmployeList() {
 
       // Send PATCH request to deactivate instead of delete
       await axios.patch(
-        `http://localhost:5000/api/employees/${selectedEmployee.employeeId}/deactivate`,
+        `https://attendanceportal-3.onrender.com/api/employees/${selectedEmployee.employeeId}/deactivate`,
         { status: "INACTIVE" },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -125,7 +125,7 @@ export default function EmployeList() {
   const fetchCompleteDetails = async (id) => {
     try {
       const token = getAuthToken();
-      const response = await axios.get(`http://localhost:5000/api/employees/${id}`, {
+      const response = await axios.get(`https://attendanceportal-3.onrender.com/api/employees/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSelectedEmployee(response.data);
