@@ -10,7 +10,7 @@ const app = express();
 
 // Middleware
 const corsOptions = {
-  origin: 'https://quality-attendance.vercel.app', // Single origin as a string (or array if multiple)
+  origin: 'https://quality-attendance.vercel.app', 
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
