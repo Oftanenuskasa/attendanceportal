@@ -34,8 +34,13 @@ export default function EmployeList() {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "ascending" });
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: "ascending",
+  });
   const [filterStatus, setFilterStatus] = useState("all");
+  const [showEditModal, setShowEditModal] = useState(false); // New state for edit modal
+  const [editEmployee, setEditEmployee] = useState(null); // Employee being edited
   const router = useRouter();
 
   // Get token from localStorage
@@ -50,13 +55,16 @@ export default function EmployeList() {
       setLoading(true);
       const token = getAuthToken();
       if (!token) {
-        router.push('/login');
+        router.push("/login");
         return;
       }
 
-      const response = await axios.get("https://attendanceportal-3.onrender.com/api/employees", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://attendanceportal-3.onrender.com/api/employees",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       console.log("Fetched Employee Data:", response.data);
 
@@ -76,7 +84,7 @@ export default function EmployeList() {
       console.error("Error fetching employee:", error);
       if (error.response?.status === 401) {
         localStorage.removeItem("auth-store");
-        router.push('/login');
+        router.push("/login");
       }
     } finally {
       setLoading(false);
@@ -87,7 +95,7 @@ export default function EmployeList() {
     fetchEmployeeData();
   }, [router]);
 
-  // Handle employee deletion (corrected to use employee state)
+  // Handle employee deletion
   const handleDelete = async (id) => {
     try {
       const token = getAuthToken();
@@ -95,13 +103,11 @@ export default function EmployeList() {
         throw new Error("No authentication token found. Please log in.");
       }
 
-      // Find the employee to get the employeeId (EMPxxx format)
-      const selectedEmployee = employee.find((emp) => emp.employeeId === id); // Changed from employees to employee
+      const selectedEmployee = employee.find((emp) => emp.employeeId === id);
       if (!selectedEmployee || !selectedEmployee.employeeId) {
         throw new Error("Employee ID not found");
       }
 
-      // Send PATCH request to deactivate instead of delete
       await axios.patch(
         `https://attendanceportal-3.onrender.com/api/employees/${selectedEmployee.employeeId}/deactivate`,
         { status: "INACTIVE" },
@@ -111,23 +117,29 @@ export default function EmployeList() {
       );
 
       toast.success("Employee deactivated successfully");
-      fetchEmployeeData(); // Refresh the employee list
+      fetchEmployeeData();
     } catch (error) {
       console.error("Error deactivating employee:", error);
-      toast.error(error.response?.data?.message || "Failed to deactivate employee");
+      toast.error(
+        error.response?.data?.message || "Failed to deactivate employee"
+      );
       if (error.response?.status === 401) {
         localStorage.removeItem("auth-store");
-        router.push('/login');
+        router.push("/login");
       }
     }
   };
 
+  // Fetch complete employee details for viewing
   const fetchCompleteDetails = async (id) => {
     try {
       const token = getAuthToken();
-      const response = await axios.get(`https://attendanceportal-3.onrender.com/api/employees/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `https://attendanceportal-3.onrender.com/api/employees/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setSelectedEmployee(response.data);
       setShowModal(true);
     } catch (error) {
@@ -135,7 +147,83 @@ export default function EmployeList() {
       console.error("Error fetching employee details:", error);
       if (error.response?.status === 401) {
         localStorage.removeItem("auth-store");
-        router.push('/login');
+        router.push("/login");
+      }
+    }
+  };
+
+  // Handle edit button click
+  const handleEditClick = async (id) => {
+    try {
+      const token = getAuthToken();
+      const response = await axios.get(
+        `https://attendanceportal-3.onrender.com/api/employees/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setEditEmployee(response.data);
+      setShowEditModal(true);
+    } catch (error) {
+      toast.error("Failed to fetch employee details for editing");
+      console.error("Error fetching employee for edit:", error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("auth-store");
+        router.push("/login");
+      }
+    }
+  };
+
+  // Handle edit form submission
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error("No authentication token found. Please log in.");
+      }
+
+      const formData = new FormData();
+      formData.append("firstName", editEmployee.firstName);
+      formData.append("middleName", editEmployee.middleName || "");
+      formData.append("lastName", editEmployee.lastName);
+      formData.append("email", editEmployee.email);
+      formData.append("phoneNumber", editEmployee.phoneNumber || "");
+      formData.append("dob", editEmployee.dob || "");
+      formData.append("dateOfJoining", editEmployee.dateOfJoining || "");
+      formData.append("gender", editEmployee.gender || "");
+      formData.append(
+        "addressJson",
+        editEmployee.address
+          ? JSON.stringify(editEmployee.address[0] || {})
+          : ""
+      );
+      formData.append("employeeId", editEmployee.employeeId);
+      if (editEmployee.photoFile) {
+        formData.append("photo", editEmployee.photoFile);
+      }
+
+      await axios.patch(
+        "https://attendanceportal-3.onrender.com/api/employees/profile/edit-no-auth",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      toast.success("Employee updated successfully");
+      setShowEditModal(false);
+      setEditEmployee(null);
+      fetchEmployeeData();
+    } catch (error) {
+      console.error("Error updating employee:", error);
+      toast.error(error.response?.data?.message || "Failed to update employee");
+      if (error.response?.status === 401) {
+        localStorage.removeItem("auth-store");
+        router.push("/login");
       }
     }
   };
@@ -195,8 +283,9 @@ export default function EmployeList() {
       return;
     }
     const textToCopy = filteredEmployee
-      .map((record) =>
-        `${record.firstName} ${record.middleName} ${record.lastName} - ${record.employeeId} - ${record.email} - ${record.status}`
+      .map(
+        (record) =>
+          `${record.firstName} ${record.middleName} ${record.lastName} - ${record.employeeId} - ${record.email} - ${record.status}`
       )
       .join("\n");
 
@@ -255,7 +344,10 @@ export default function EmployeList() {
   // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredEmployee.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredEmployee.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
   const totalPages = Math.ceil(filteredEmployee.length / itemsPerPage);
 
   // Animation variants
@@ -355,7 +447,8 @@ export default function EmployeList() {
                 onClick={() => handleSort("employeeId")}
               >
                 Employee ID{" "}
-                {sortConfig.key === "employeeId" && sortConfig.direction === "ascending" ? (
+                {sortConfig.key === "employeeId" &&
+                sortConfig.direction === "ascending" ? (
                   <FiArrowUp className="ml-1 inline" />
                 ) : (
                   <FiArrowDown className="ml-1 inline" />
@@ -366,7 +459,8 @@ export default function EmployeList() {
                 onClick={() => handleSort("fullName")}
               >
                 Full Name{" "}
-                {sortConfig.key === "fullName" && sortConfig.direction === "ascending" ? (
+                {sortConfig.key === "fullName" &&
+                sortConfig.direction === "ascending" ? (
                   <FiArrowUp className="ml-1 inline" />
                 ) : (
                   <FiArrowDown className="ml-1 inline" />
@@ -377,7 +471,8 @@ export default function EmployeList() {
                 onClick={() => handleSort("email")}
               >
                 Email{" "}
-                {sortConfig.key === "email" && sortConfig.direction === "ascending" ? (
+                {sortConfig.key === "email" &&
+                sortConfig.direction === "ascending" ? (
                   <FiArrowUp className="ml-1 inline" />
                 ) : (
                   <FiArrowDown className="ml-1 inline" />
@@ -400,7 +495,9 @@ export default function EmployeList() {
               </tr>
             ) : currentItems.length === 0 ? (
               <tr>
-                <td colSpan="5" className="text-center py-4 text-gray-500">No employees found</td>
+                <td colSpan="5" className="text-center py-4 text-gray-500">
+                  No employees found
+                </td>
               </tr>
             ) : (
               currentItems.map((item) => (
@@ -412,7 +509,9 @@ export default function EmployeList() {
                   className="hover:bg-gray-100"
                 >
                   <td className="px-6 py-4 text-center">{item.employeeId}</td>
-                  <td className="px-6 py-4 text-center">{`${item.firstName} ${item.middleName} ${item.lastName}`.trim()}</td>
+                  <td className="px-6 py-4 text-center">
+                    {`${item.firstName} ${item.middleName} ${item.lastName}`.trim()}
+                  </td>
                   <td className="px-6 py-4 text-center">{item.email}</td>
                   <td className="px-6 py-4 text-center">
                     <span
@@ -438,13 +537,13 @@ export default function EmployeList() {
                       >
                         <FiEye size={20} />
                       </button>
-                      <Link
-                        href={`/employee/edit/${item.employeeId}`}
+                      <button
+                        onClick={() => handleEditClick(item.employeeId)}
                         className="text-yellow-500 hover:text-yellow-700"
                         title="Edit Employee"
                       >
                         <FiEdit size={20} />
-                      </Link>
+                      </button>
                       <button
                         onClick={() => {
                           setEmployeeToDelete(item);
@@ -484,7 +583,9 @@ export default function EmployeList() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
             disabled={currentPage === totalPages}
             className="px-4 py-2 bg-indigo-500 text-white rounded-lg disabled:opacity-50 shadow"
           >
@@ -514,6 +615,214 @@ export default function EmployeList() {
           }}
           onCancel={() => setShowConfirmDialog(false)}
         />
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editEmployee && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        >
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4 text-gray-800">
+              Edit Employee
+            </h2>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  value={editEmployee.firstName}
+                  onChange={(e) =>
+                    setEditEmployee({
+                      ...editEmployee,
+                      firstName: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Middle Name
+                </label>
+                <input
+                  type="text"
+                  value={editEmployee.middleName || ""}
+                  onChange={(e) =>
+                    setEditEmployee({
+                      ...editEmployee,
+                      middleName: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  value={editEmployee.lastName}
+                  onChange={(e) =>
+                    setEditEmployee({
+                      ...editEmployee,
+                      lastName: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editEmployee.email}
+                  onChange={(e) =>
+                    setEditEmployee({ ...editEmployee, email: e.target.value })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={editEmployee.phoneNumber || ""}
+                  onChange={(e) =>
+                    setEditEmployee({
+                      ...editEmployee,
+                      phoneNumber: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Date of Birth
+                </label>
+                <input
+                  type="date"
+                  value={
+                    editEmployee.dob
+                      ? new Date(editEmployee.dob).toISOString().split("T")[0]
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setEditEmployee({ ...editEmployee, dob: e.target.value })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Date of Joining
+                </label>
+                <input
+                  type="date"
+                  value={
+                    editEmployee.dateOfJoining
+                      ? new Date(editEmployee.dateOfJoining)
+                          .toISOString()
+                          .split("T")[0]
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setEditEmployee({
+                      ...editEmployee,
+                      dateOfJoining: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Gender
+                </label>
+                <select
+                  value={editEmployee.gender || ""}
+                  onChange={(e) =>
+                    setEditEmployee({ ...editEmployee, gender: e.target.value })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Photo
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    setEditEmployee({
+                      ...editEmployee,
+                      photoFile: e.target.files[0],
+                    })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Address (City)
+                </label>
+                <input
+                  type="text"
+                  value={
+                    (editEmployee.address && editEmployee.address[0]?.city) ||
+                    ""
+                  }
+                  onChange={(e) =>
+                    setEditEmployee({
+                      ...editEmployee,
+                      address: [
+                        { ...editEmployee.address[0], city: e.target.value },
+                      ],
+                    })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditEmployee(null);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </motion.div>
       )}
     </div>
   );

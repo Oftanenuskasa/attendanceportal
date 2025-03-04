@@ -497,4 +497,41 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
+router.patch('/profile/edit-no-auth', upload.single('photo'), async (req, res) => {
+  try {
+    const { firstName, middleName, lastName, email, phoneNumber, dob, dateOfJoining, gender, addressJson, employeeId } = req.body;
+    let parsedAddress = [];
+    if (addressJson) {
+      parsedAddress = typeof addressJson === 'string' ? JSON.parse(addressJson) : addressJson;
+    }
+    const updateData = {
+      firstName,
+      middleName,
+      lastName,
+      email,
+      phoneNumber,
+      dob,
+      dateOfJoining,
+      gender,
+      address: Array.isArray(parsedAddress) ? parsedAddress : [parsedAddress],
+      ...(req.file && { photo: req.file.path }),
+    };
+    const employee = await Employee.findOneAndUpdate(
+      { employeeId },
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    res.json(employee);
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
