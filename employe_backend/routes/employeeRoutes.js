@@ -5,6 +5,15 @@ const Attendance = require('../models/Attendance');
 const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER, // Store in .env
+    pass: process.env.EMAIL_PASS, // Store in .env
+  },
+});
 
 router.post('/create', upload.single('photo'), async (req, res) => {
   try {
@@ -418,6 +427,80 @@ router.delete('/:employeeId', auth, async (req, res) => {
     await Employee.deleteOne({ employeeId: req.params.employeeId });
     await Attendance.deleteMany({ employeeId: employee._id });
     res.json({ message: 'Employee deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const employee = await Employee.findOne({
+      employeeId: decoded.employeeId,
+      resetToken: token,
+      resetTokenExpiration: { $gt: Date.now() },
+    });
+
+    if (!employee) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Update password (bcrypt hashing handled by pre-save middleware)
+    employee.password = password; // Plain text; will be hashed by pre-save hook
+    employee.resetToken = undefined;
+    employee.resetTokenExpiration = undefined;
+    await employee.save();
+
+    res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error(error);
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(400).json({ message: 'Invalid reset token' });
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/forgot-password', async (req, res) => {
+  const { username } = req.body;
+
+  try {
+    // Find employee by username or email
+    const employee = await Employee.findOne({
+      $or: [{ username }, { email: username }],
+    });
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    // Generate reset token
+    const resetToken = jwt.sign(
+      { id: employee.employeeId },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '1h' }
+    );
+
+    // Save reset token and expiration to employee record
+    employee.resetToken = resetToken;
+    employee.resetTokenExpiration = Date.now() + 3600000; // 1 hour
+    await employee.save();
+
+    // Send email with reset link
+    const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: employee.email,
+      subject: 'Password Reset Request',
+      text: `You requested a password reset. Click this link to reset your password: ${resetUrl}. This link expires in 1 hour.`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: 'Reset link sent to your email' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

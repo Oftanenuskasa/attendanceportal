@@ -18,21 +18,26 @@ const employeeSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phoneNumber: String,
-  status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'TERMINATED'], default: 'ACTIVE' },
+  status: { 
+    type: String, 
+    enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'TERMINATED'], 
+    default: 'ACTIVE' 
+  },
   dob: Date,
-  gender: { type: String, enum: ['MALE', 'FEMALE', ''] },
+  gender: { type: String, enum: ['MALE', 'FEMALE', ''], default: '' }, // Empty string as default
   address: [addressSchema],
   photo: String,
   roles: [{ type: String, default: 'EMPLOYEE' }],
+  resetToken: { type: String }, // Added for forgot password
+  resetTokenExpiration: { type: Date }, // Added for forgot password
 }, { timestamps: true });
 
 employeeSchema.pre('save', async function (next) {
   if (this.isNew && !this.employeeId) {
     try {
-      // Find the employee with the highest employeeId
       const lastEmployee = await mongoose.model('Employee')
         .findOne()
-        .sort({ employeeId: -1 }) // Sort descending
+        .sort({ employeeId: -1 })
         .select('employeeId');
 
       let nextIdNum = 1; // Default to EMP001 if no employees exist
@@ -41,9 +46,9 @@ employeeSchema.pre('save', async function (next) {
         nextIdNum = lastIdNum + 1;
       }
 
-      this.employeeId = `EMP${String(nextIdNum).padStart(3, '0')}`; // e.g., EMP007
+      this.employeeId = `EMP${String(nextIdNum).padStart(3, '0')}`;
     } catch (error) {
-      return next(error); // Pass error to Mongoose
+      return next(error);
     }
   }
 

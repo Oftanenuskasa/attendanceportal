@@ -9,14 +9,13 @@ dotenv.config();
 const app = express();
 
 // Middleware
-const allowedOrigins = ['https://quality-attendance.vercel.app']; // Add your Vercel frontend domain
 const corsOptions = {
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], // Allow specific HTTP methods if needed
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allow headers that your frontend sends
+  origin: 'https://quality-attendance.vercel.app', // Single origin as a string (or array if multiple)
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
-app.use(cors(corsOptions));  // Use the configured CORS options
+app.use(cors(corsOptions)); // Use the configured CORS options
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
@@ -24,7 +23,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/employees', employeeRoutes);
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI) 
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
