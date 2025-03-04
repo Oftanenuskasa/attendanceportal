@@ -467,30 +467,21 @@ router.post('/reset-password', async (req, res) => {
 
 router.post('/forgot-password', async (req, res) => {
   const { username } = req.body;
-
   try {
-    // Find employee by username or email
     const employee = await Employee.findOne({
       $or: [{ username }, { email: username }],
     });
-
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
-
-    // Generate reset token
     const resetToken = jwt.sign(
       { id: employee.employeeId },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '1h' }
     );
-
-    // Save reset token and expiration to employee record
     employee.resetToken = resetToken;
-    employee.resetTokenExpiration = Date.now() + 3600000; // 1 hour
+    employee.resetTokenExpiration = Date.now() + 3600000;
     await employee.save();
-
-    // Send email with reset link
     const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -498,7 +489,6 @@ router.post('/forgot-password', async (req, res) => {
       subject: 'Password Reset Request',
       text: `You requested a password reset. Click this link to reset your password: ${resetUrl}. This link expires in 1 hour.`,
     };
-
     await transporter.sendMail(mailOptions);
     res.status(200).json({ message: 'Reset link sent to your email' });
   } catch (error) {
