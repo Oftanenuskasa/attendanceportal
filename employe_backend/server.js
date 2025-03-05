@@ -16,7 +16,7 @@ console.log("APP_URL:", process.env.APP_URL);
 
 // CORS Configuration
 const corsOptions = {
-  origin: 'http://localhost:3000', // Your frontend origin
+  origin: 'https://quality-attendance.vercel.app', // Your frontend origin
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Allow credentials for auth
