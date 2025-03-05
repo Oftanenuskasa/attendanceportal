@@ -34,7 +34,7 @@ const ResetPasswordForm = () => {
 
     try {
       const response = await axios.post(
-        "https://attendanceportal-3.onrender.com/api/employees/reset-password",
+        "http://localhost:5000/api/employees/reset-password",
         { token, password }
       );
       setMessage("Password reset successfully.");

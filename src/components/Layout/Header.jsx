@@ -15,7 +15,7 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const router = useRouter();
-  const BASE_URL = "https://attendanceportal-3.onrender.com";
+  const BASE_URL = "http://localhost:5000";
 
   useEffect(() => {
     const loadUserData = () => {

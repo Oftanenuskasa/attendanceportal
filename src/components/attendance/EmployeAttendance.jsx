@@ -9,34 +9,65 @@ import { useRouter } from "next/navigation";
 export default function Attendance() {
   const [name, setName] = useState("");
   const [department, setDepartment] = useState("");
-  const [status, setStatus] = useState(""); // Will be overridden by time check
+  const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [attendanceWindow, setAttendanceWindow] = useState({ startTime: "08:30", endTime: "09:00" });
   const router = useRouter();
 
-  // Load user data on mount
+  const getAuthToken = () => {
+    const authData = JSON.parse(localStorage.getItem("auth-store"));
+    return authData?.token || null;
+  };
+
+  // Fetch settings function
+  const fetchSettings = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await axios.get("http://localhost:5000/api/employees/settings", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { attendanceWindow, departments } = response.data;
+      setAttendanceWindow(attendanceWindow || { startTime: "08:30", endTime: "09:00" });
+      setDepartments(departments || []);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("auth-store");
+        router.push("/login");
+      }
+    }
+  };
+
+  // Fetch user data and settings on mount
   useEffect(() => {
     const authData = JSON.parse(localStorage.getItem("auth-store"));
     if (!authData || !authData.user) {
       router.push("/login");
-    } else {
-      setName(authData.user.name);
+      return;
     }
+    setName(authData.user.name);
+    fetchSettings();
+
+    // Add event listener for window focus to refresh settings
+    window.addEventListener("focus", fetchSettings);
+    return () => window.removeEventListener("focus", fetchSettings);
   }, [router]);
 
-  // Function to check if current time is within 8:30 AM - 9:00 AM EAT (Ethiopian local time)
   const isWithinAttendanceWindow = () => {
-    // Use Ethiopian local time (UTC+3)
     const now = new Date();
     const ethiopianTime = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Addis_Ababa" }));
-    const hours = ethiopianTime.getHours();
-    const minutes = ethiopianTime.getMinutes();
+    const [startHours, startMinutes] = attendanceWindow.startTime.split(":").map(Number);
+    const [endHours, endMinutes] = attendanceWindow.endTime.split(":").map(Number);
 
-    // Convert current time to minutes since midnight
-    const currentMinutes = hours * 60 + minutes;
-
-    // Attendance window: 8:30 AM - 9:00 AM EAT
-    const startWindow = 8 * 60 + 30; // 8:30 AM = 510 minutes
-    const endWindow = 9 * 60; // 9:00 AM = 540 minutes
+    const currentMinutes = ethiopianTime.getHours() * 60 + ethiopianTime.getMinutes();
+    const startWindow = startHours * 60 + startMinutes;
+    const endWindow = endHours * 60 + endMinutes;
 
     return currentMinutes >= startWindow && currentMinutes <= endWindow;
   };
@@ -51,24 +82,22 @@ export default function Attendance() {
       return;
     }
 
-    // Determine status based on time
     const determinedStatus = isWithinAttendanceWindow() ? "Present" : "Absent";
 
     try {
       const response = await axios.post(
-        "https://attendanceportal-3.onrender.com/api/employees/attendance",
+        "http://localhost:5000/api/employees/attendance", // Updated to local endpoint
         { name, department, status: determinedStatus },
         {
-          headers: {
-            Authorization: `Bearer ${authData.token}`,
-          },
+          headers: { Authorization: `Bearer ${authData.token}` },
         }
       );
 
       console.log("Attendance marked:", response.data);
       alert(`Attendance marked as ${determinedStatus} successfully!`);
       setDepartment("");
-      setStatus(""); // Reset status (though it’s overridden)
+      setStatus("");
+      fetchSettings(); // Refresh settings after submission to ensure latest window
     } catch (error) {
       console.error(error);
       const message = error.response?.data?.message || "An error occurred";
@@ -84,11 +113,10 @@ export default function Attendance() {
 
   return (
     <div>
-      {/* Attendance Form */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-xl shadow-xl p-8 mb-8"
+        className="bg-white rounded-xl shadow-xl p-8 mb-8 max-w-3xl mx-auto"
       >
         <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center mt-12">
           <UserCheck className="mr-3 text-indigo-600" /> Mark Your Attendance
@@ -116,9 +144,11 @@ export default function Attendance() {
                 required
               >
                 <option value="">Select Department</option>
-                <option value="Quality Control">Quality Control and Assurance</option>
-                <option value="Production">Methodology and Standard</option>
-                <option value="R&D">NID Project</option>
+                {departments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">
@@ -131,8 +161,8 @@ export default function Attendance() {
               />
               <p className="text-sm text-gray-500">
                 {isWithinAttendanceWindow()
-                  ? "Within 8:30 AM - 9:00 AM window (EAT)"
-                  : "Outside attendance window (EAT)"}
+                  ? `Within ${attendanceWindow.startTime} - ${attendanceWindow.endTime} (EAT)`
+                  : `Outside ${attendanceWindow.startTime} - ${attendanceWindow.endTime} (EAT)`}
               </p>
             </div>
           </div>

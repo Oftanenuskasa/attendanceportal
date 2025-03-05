@@ -59,12 +59,9 @@ export default function EmployeList() {
         return;
       }
 
-      const response = await axios.get(
-        "https://attendanceportal-3.onrender.com/api/employees",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await axios.get("http://localhost:5000/api/employees", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       console.log("Fetched Employee Data:", response.data);
 
@@ -109,7 +106,7 @@ export default function EmployeList() {
       }
 
       await axios.patch(
-        `https://attendanceportal-3.onrender.com/api/employees/${selectedEmployee.employeeId}/deactivate`,
+        `http://localhost:5000/api/employees/${selectedEmployee.employeeId}/deactivate`,
         { status: "INACTIVE" },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -135,7 +132,7 @@ export default function EmployeList() {
     try {
       const token = getAuthToken();
       const response = await axios.get(
-        `https://attendanceportal-3.onrender.com/api/employees/${id}`,
+        `http://localhost:5000/api/employees/${id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -157,7 +154,7 @@ export default function EmployeList() {
     try {
       const token = getAuthToken();
       const response = await axios.get(
-        `https://attendanceportal-3.onrender.com/api/employees/${id}`,
+        `http://localhost:5000/api/employees/${id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -204,7 +201,7 @@ export default function EmployeList() {
       }
 
       await axios.patch(
-        "https://attendanceportal-3.onrender.com/api/employees/profile/edit-no-auth",
+        "http://localhost:5000/api/employees/profile/edit-no-auth",
         formData,
         {
           headers: {
@@ -623,205 +620,332 @@ export default function EmployeList() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
         >
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">
-              Edit Employee
-            </h2>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  First Name
-                </label>
-                <input
-                  type="text"
-                  value={editEmployee.firstName}
-                  onChange={(e) =>
-                    setEditEmployee({
-                      ...editEmployee,
-                      firstName: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required
-                />
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-semibold text-gray-800">
+                Edit Employee
+              </h2>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editEmployee.firstName}
+                      onChange={(e) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          firstName: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Middle Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editEmployee.middleName || ""}
+                      onChange={(e) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          middleName: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editEmployee.lastName}
+                      onChange={(e) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          lastName: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={editEmployee.email}
+                      onChange={(e) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          email: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      value={editEmployee.phoneNumber || ""}
+                      onChange={(e) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          phoneNumber: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date of Birth
+                    </label>
+                    <input
+                      type="date"
+                      value={
+                        editEmployee.dob
+                          ? new Date(editEmployee.dob)
+                              .toISOString()
+                              .split("T")[0]
+                          : ""
+                      }
+                      onChange={(e) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          dob: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date of Joining
+                    </label>
+                    <input
+                      type="date"
+                      value={
+                        editEmployee.dateOfJoining
+                          ? new Date(editEmployee.dateOfJoining)
+                              .toISOString()
+                              .split("T")[0]
+                          : ""
+                      }
+                      onChange={(e) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          dateOfJoining: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gender
+                    </label>
+                    <select
+                      value={editEmployee.gender || ""}
+                      onChange={(e) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          gender: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Photo
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          photoFile: e.target.files[0],
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all duration-200"
+                    />
+                  </div>
+
+                  {/* Address Fields */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        value={
+                          (editEmployee.address &&
+                            editEmployee.address[0]?.city) ||
+                          ""
+                        }
+                        onChange={(e) =>
+                          setEditEmployee({
+                            ...editEmployee,
+                            address: [
+                              {
+                                ...editEmployee.address[0],
+                                city: e.target.value,
+                              },
+                            ],
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Zone
+                      </label>
+                      <input
+                        type="text"
+                        value={
+                          (editEmployee.address &&
+                            editEmployee.address[0]?.zone) ||
+                          ""
+                        }
+                        onChange={(e) =>
+                          setEditEmployee({
+                            ...editEmployee,
+                            address: [
+                              {
+                                ...editEmployee.address[0],
+                                zone: e.target.value,
+                              },
+                            ],
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Region
+                      </label>
+                      <input
+                        type="text"
+                        value={
+                          (editEmployee.address &&
+                            editEmployee.address[0]?.region) ||
+                          ""
+                        }
+                        onChange={(e) =>
+                          setEditEmployee({
+                            ...editEmployee,
+                            address: [
+                              {
+                                ...editEmployee.address[0],
+                                region: e.target.value,
+                              },
+                            ],
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Country
+                      </label>
+                      <input
+                        type="text"
+                        value={
+                          (editEmployee.address &&
+                            editEmployee.address[0]?.country) ||
+                          ""
+                        }
+                        onChange={(e) =>
+                          setEditEmployee({
+                            ...editEmployee,
+                            address: [
+                              {
+                                ...editEmployee.address[0],
+                                country: e.target.value,
+                              },
+                            ],
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Middle Name
-                </label>
-                <input
-                  type="text"
-                  value={editEmployee.middleName || ""}
-                  onChange={(e) =>
-                    setEditEmployee({
-                      ...editEmployee,
-                      middleName: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  value={editEmployee.lastName}
-                  onChange={(e) =>
-                    setEditEmployee({
-                      ...editEmployee,
-                      lastName: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={editEmployee.email}
-                  onChange={(e) =>
-                    setEditEmployee({ ...editEmployee, email: e.target.value })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Phone Number
-                </label>
-                <input
-                  type="text"
-                  value={editEmployee.phoneNumber || ""}
-                  onChange={(e) =>
-                    setEditEmployee({
-                      ...editEmployee,
-                      phoneNumber: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Date of Birth
-                </label>
-                <input
-                  type="date"
-                  value={
-                    editEmployee.dob
-                      ? new Date(editEmployee.dob).toISOString().split("T")[0]
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setEditEmployee({ ...editEmployee, dob: e.target.value })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Date of Joining
-                </label>
-                <input
-                  type="date"
-                  value={
-                    editEmployee.dateOfJoining
-                      ? new Date(editEmployee.dateOfJoining)
-                          .toISOString()
-                          .split("T")[0]
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setEditEmployee({
-                      ...editEmployee,
-                      dateOfJoining: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Gender
-                </label>
-                <select
-                  value={editEmployee.gender || ""}
-                  onChange={(e) =>
-                    setEditEmployee({ ...editEmployee, gender: e.target.value })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="MALE">Male</option>
-                  <option value="FEMALE">Female</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Photo
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setEditEmployee({
-                      ...editEmployee,
-                      photoFile: e.target.files[0],
-                    })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Address (City)
-                </label>
-                <input
-                  type="text"
-                  value={
-                    (editEmployee.address && editEmployee.address[0]?.city) ||
-                    ""
-                  }
-                  onChange={(e) =>
-                    setEditEmployee({
-                      ...editEmployee,
-                      address: [
-                        { ...editEmployee.address[0], city: e.target.value },
-                      ],
-                    })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <button
+
+              {/* Buttons */}
+              <div className="mt-8 flex justify-end space-x-3 border-t border-gray-200 pt-6">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   type="button"
                   onClick={() => {
                     setShowEditModal(false);
                     setEditEmployee(null);
                   }}
-                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200 font-medium"
                 >
                   Cancel
-                </button>
-                <button
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 font-medium"
                 >
-                  Save
-                </button>
+                  Save Changes
+                </motion.button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </motion.div>
       )}
     </div>

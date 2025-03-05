@@ -11,7 +11,7 @@ const ContactSupport = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("https://attendanceportal-3.onrender.com/api/employees/support", { subject, message });
+      await axios.post("http://localhost:5000/api/employees/support", { subject, message });
       alert("Message sent to support!");
       setSubject("");
       setMessage("");
