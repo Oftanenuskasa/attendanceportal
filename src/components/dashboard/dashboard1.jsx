@@ -31,13 +31,13 @@ export default function AttendanceSystem() {
       }
 
       // Fetch all employees
-      const employeesResponse = await axios.get("http://localhost:5000/api/employees", {
+      const employeesResponse = await axios.get("https://attendanceportal-3.onrender.com/api/employees", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTotalEmployees(employeesResponse.data.length);
 
       // Fetch all attendance records
-      const attendanceResponse = await axios.get("http://localhost:5000/api/employees/attendance", {
+      const attendanceResponse = await axios.get("https://attendanceportal-3.onrender.com/api/employees/attendance", {
         headers: { Authorization: `Bearer ${token}` },
       });
 

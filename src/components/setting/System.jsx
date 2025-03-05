@@ -26,7 +26,7 @@ const SystemSettings = () => {
           return;
         }
 
-        const response = await axios.get("http://localhost:5000/api/employees/settings", {
+        const response = await axios.get("https://attendanceportal-3.onrender.com/api/employees/settings", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const { attendanceWindow, departments } = response.data;
@@ -64,7 +64,7 @@ const SystemSettings = () => {
       }
 
       await axios.post(
-        "http://localhost:5000/api/employees/settings",
+        "https://attendanceportal-3.onrender.com/api/employees/settings",
         {
           attendanceWindow: { startTime, endTime },
           departments,

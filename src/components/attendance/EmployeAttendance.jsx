@@ -29,7 +29,7 @@ export default function Attendance() {
         return;
       }
 
-      const response = await axios.get("http://localhost:5000/api/employees/settings", {
+      const response = await axios.get("https://attendanceportal-3.onrender.com/api/employees/settings", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const { attendanceWindow, departments } = response.data;

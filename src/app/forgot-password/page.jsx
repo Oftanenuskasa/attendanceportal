@@ -19,7 +19,7 @@ const ForgotPassword = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/employees/forgot-password",
+        "https://attendanceportal-3.onrender.com/api/employees/forgot-password",
         { username }
       );
       setMessage("A password reset link has been sent to your email.");

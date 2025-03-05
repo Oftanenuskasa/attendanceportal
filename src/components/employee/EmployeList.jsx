@@ -59,7 +59,7 @@ export default function EmployeList() {
         return;
       }
 
-      const response = await axios.get("http://localhost:5000/api/employees", {
+      const response = await axios.get("https://attendanceportal-3.onrender.com/api/employees", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -106,7 +106,7 @@ export default function EmployeList() {
       }
 
       await axios.patch(
-        `http://localhost:5000/api/employees/${selectedEmployee.employeeId}/deactivate`,
+        `https://attendanceportal-3.onrender.com/api/employees/${selectedEmployee.employeeId}/deactivate`,
         { status: "INACTIVE" },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -132,7 +132,7 @@ export default function EmployeList() {
     try {
       const token = getAuthToken();
       const response = await axios.get(
-        `http://localhost:5000/api/employees/${id}`,
+        `https://attendanceportal-3.onrender.com/api/employees/${id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -154,7 +154,7 @@ export default function EmployeList() {
     try {
       const token = getAuthToken();
       const response = await axios.get(
-        `http://localhost:5000/api/employees/${id}`,
+        `https://attendanceportal-3.onrender.com/api/employees/${id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -201,7 +201,7 @@ export default function EmployeList() {
       }
 
       await axios.patch(
-        "http://localhost:5000/api/employees/profile/edit-no-auth",
+        "https://attendanceportal-3.onrender.com/api/employees/profile/edit-no-auth",
         formData,
         {
           headers: {
