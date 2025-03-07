@@ -112,7 +112,6 @@ module.exports = (transporter) => {
 
       const token = jwt.sign(
         {
-          id: employee._id.toString(),
           roles: employee.roles,
           employeeId: employee.employeeId,
         },

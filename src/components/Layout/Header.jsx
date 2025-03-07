@@ -145,8 +145,8 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
         throw new Error(data.message || 'Failed to change password');
       }
 
-      setSuccess('Password changed successfully');
-      
+      setSuccess('Password changed successfully. You will be logged out and redirected to login.');
+
       // Clear form fields
       setPasswordData({
         currentPassword: '',
@@ -154,9 +154,12 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
         confirmPassword: ''
       });
 
-      // Close modal after a delay
+      // Log out and redirect to login page after a delay
       setTimeout(() => {
-        setIsChangePasswordOpen(false);
+        localStorage.removeItem("auth-store"); // Log out by clearing auth data
+        setUser(null); // Clear user state
+        setIsChangePasswordOpen(false); // Close modal
+        router.push("/login"); // Redirect to login page
       }, 2000);
 
     } catch (error) {
@@ -172,6 +175,7 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
     router.push("/login");
   };
 
+  // Rest of your component (render logic) remains unchanged
   return (
     <header className="fixed top-0 left-0 right-0 flex justify-between items-center py-4 px-6 bg-[#fff] shadow-md z-10 dark:bg-gray-800 dark:text-white">
       <div className="flex items-center">
@@ -262,7 +266,7 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
                   alt="Profile"
                   className="w-[35px] h-[35px] rounded-full object-cover"
                   onError={(e) => (e.target.src = "/default-photo.jpg")}
-                  key={user.photo} // Force re-render when photo changes
+                  key={user.photo}
                 />
               ) : (
                 <FiUser size={35} className="text-[#999] font-bold dark:text-gray-300" />
@@ -294,7 +298,6 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
         </div>
       </div>
 
-      {/* Change Password Modal */}
       {isChangePasswordOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
