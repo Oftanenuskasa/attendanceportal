@@ -497,7 +497,7 @@ module.exports = (transporter) => {
       }
       
       // Get user from database
-      const employee = await Employee.findOne({ employeeId: req.employee.employeeId });
+      const employee = await Employee.findOne({ employeeId: req.user.employeeId });
       if (!employee) {
         return res.status(404).json({ message: 'Employee not found' });
       }
