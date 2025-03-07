@@ -502,6 +502,12 @@ module.exports = (transporter) => {
         return res.status(404).json({ message: 'Employee not found' });
       }
   
+      console.log('Employee before update:', {
+        id: employee.employeeId,
+        username: employee.username,
+        currentPasswordHash: employee.password,
+      });
+  
       const isMatch = await employee.comparePassword(currentPassword);
       if (!isMatch) {
         return res.status(400).json({ message: 'Current password is incorrect' });
@@ -512,12 +518,18 @@ module.exports = (transporter) => {
         return res.status(400).json({ message: 'New password must be different from current password' });
       }
   
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(newPassword, salt);
-      employee.password = hashedPassword;
+      // Set the new password (unhashed); pre-save hook will hash it
+      employee.password = newPassword;
+  
+      // Save the updated employee
       await employee.save();
   
-      console.log('Updated employee password hash:', employee.password); // Debug log
+      const updatedEmployee = await Employee.findById(employee._id);
+      console.log('Employee after update:', {
+        id: updatedEmployee._id,
+        username: updatedEmployee.username,
+        newPasswordHash: updatedEmployee.password,
+      });
   
       res.json({ message: 'Password updated successfully' });
     } catch (error) {
