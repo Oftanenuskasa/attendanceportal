@@ -497,16 +497,10 @@ module.exports = (transporter) => {
         return res.status(400).json({ message: 'All fields are required' });
       }
   
-      const employee = req.employee; // Use req.employee from auth middleware
+      const employee = req.user;
       if (!employee) {
         return res.status(404).json({ message: 'Employee not found' });
       }
-  
-      console.log('Employee before update:', {
-        id: employee.employeeId,
-        username: employee.username,
-        currentPasswordHash: employee.password,
-      });
   
       const isMatch = await employee.comparePassword(currentPassword);
       if (!isMatch) {
@@ -518,19 +512,12 @@ module.exports = (transporter) => {
         return res.status(400).json({ message: 'New password must be different from current password' });
       }
   
-      // Set the new password (pre-save hook will hash it)
-      employee.password = newPassword;
-  
-      // Save the updated employee
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      employee.password = hashedPassword;
       await employee.save();
   
-      // Verify the update
-      const updatedEmployee = await Employee.findById(employee._id);
-      console.log('Employee after update:', {
-        id: updatedEmployee.employeeId,
-        username: updatedEmployee.username,
-        newPasswordHash: updatedEmployee.password,
-      });
+      console.log('Updated employee password hash:', employee.password); // Debug log
   
       res.json({ message: 'Password updated successfully' });
     } catch (error) {
