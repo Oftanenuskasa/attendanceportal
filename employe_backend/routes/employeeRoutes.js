@@ -99,7 +99,10 @@ module.exports = (transporter) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      console.log("Stored Hashed Password:", employee.password);
+
       const isMatch = await bcrypt.compare(password, employee.password);
+      console.log("Password match:", isMatch);
       if (!isMatch) {
         return res
           .status(400)
@@ -588,6 +591,8 @@ module.exports = (transporter) => {
 
       // Save the updated employee
       await employee.save();
+
+      console.log("Updated password successfully:", employee.password);
 
       res.json({ message: "Password updated successfully" });
     } catch (error) {
