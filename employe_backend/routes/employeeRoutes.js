@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const upload = require('../middleware/upload');
