@@ -497,7 +497,7 @@ module.exports = (transporter) => {
         return res.status(400).json({ message: 'All fields are required' });
       }
   
-      const employee = req.user;
+      const employee = req.employee; // Use req.employee from auth middleware
       if (!employee) {
         return res.status(404).json({ message: 'Employee not found' });
       }
@@ -518,15 +518,16 @@ module.exports = (transporter) => {
         return res.status(400).json({ message: 'New password must be different from current password' });
       }
   
-      // Set the new password (unhashed); pre-save hook will hash it
+      // Set the new password (pre-save hook will hash it)
       employee.password = newPassword;
   
       // Save the updated employee
       await employee.save();
   
+      // Verify the update
       const updatedEmployee = await Employee.findById(employee._id);
       console.log('Employee after update:', {
-        id: updatedEmployee._id,
+        id: updatedEmployee.employeeId,
         username: updatedEmployee.username,
         newPasswordHash: updatedEmployee.password,
       });
