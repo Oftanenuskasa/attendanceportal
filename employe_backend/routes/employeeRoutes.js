@@ -99,6 +99,7 @@ module.exports = (transporter) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      console.log("Entered Password:", password);
       console.log("Stored Hashed Password:", employee.password);
 
       const isMatch = await bcrypt.compare(password, employee.password);
@@ -561,6 +562,8 @@ module.exports = (transporter) => {
       const employee = await Employee.findOne({
         employeeId: req.user.employeeId,
       });
+
+      console.log("Freshly Retrieved Hashed Password:", employee.password);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -588,6 +591,8 @@ module.exports = (transporter) => {
 
       // Hash the new password
       employee.password = await bcrypt.hash(newPassword, 10);
+
+      employee.markModified("password");
 
       // Save the updated employee
       await employee.save();
