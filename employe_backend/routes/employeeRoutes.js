@@ -87,44 +87,40 @@ module.exports = (transporter) => {
     }
   });
 
-  router.post("/login", async (req, res) => {
+  router.post('/login', async (req, res) => {
     try {
       const { username, password } = req.body;
-
+  
       if (!username || !password) {
-        return res
-          .status(400)
-          .json({ message: "Username and password are required" });
+        return res.status(400).json({ message: 'Username and password are required' });
       }
-
+  
       const employee = await Employee.findOne({
         $or: [{ username }, { email: username }],
       });
-
+  
       if (!employee) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: 'Invalid credentials' });
       }
-
-      console.log("Entered Password:", password);
-      console.log("Stored Hashed Password:", employee.password);
-
+  
+      console.log('Entered Password:', password);
+      console.log('Stored Hashed Password:', employee.password);
+  
       const isMatch = await employee.comparePassword(password);
-      console.log("Password match:", isMatch);
+      console.log('Password match:', isMatch);
       if (!isMatch) {
-        return res
-          .status(401)
-          .json({ message: "Invalid username or password" });
+        return res.status(401).json({ message: 'Invalid username or password' });
       }
-
+  
       const token = jwt.sign(
         {
           employeeId: employee.employeeId,
           roles: employee.roles,
         },
         process.env.JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: '1h' }
       );
-
+  
       res.status(200).json({
         token,
         username: employee.username,
@@ -134,8 +130,8 @@ module.exports = (transporter) => {
         photo: employee.photo,
       });
     } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   });
 
@@ -553,56 +549,48 @@ module.exports = (transporter) => {
     }
   });
 
-  router.post("/change-password", auth, async (req, res) => {
+  router.post('/change-password', auth, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
-
+  
       if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "All fields are required" });
+        return res.status(400).json({ message: 'All fields are required' });
       }
-
+  
       const employee = req.user; // Full document from auth middleware
       if (!employee) {
-        return res.status(404).json({ message: "Employee not found" });
+        return res.status(404).json({ message: 'Employee not found' });
       }
-
-      console.log("Employee before update:", {
+  
+      console.log('Employee before update:', {
         employeeId: employee.employeeId,
         username: employee.username,
         currentPasswordHash: employee.password,
       });
-
+  
       const isMatch = await employee.comparePassword(currentPassword);
       if (!isMatch) {
-        return res
-          .status(400)
-          .json({ message: "Current password is incorrect" });
+        return res.status(400).json({ message: 'Current password is incorrect' });
       }
-
+  
       const isSamePassword = await employee.comparePassword(newPassword);
       if (isSamePassword) {
-        return res
-          .status(400)
-          .json({
-            message: "New password must be different from current password",
-          });
+        return res.status(400).json({ message: 'New password must be different from current password' });
       }
-
-      // Set plain text password; pre('save') hook will hash it
-      employee.password = newPassword;
-
+  
+      employee.password = newPassword; // pre('save') hook will hash it
       await employee.save();
-
-      console.log("Employee after update:", {
+  
+      console.log('Employee after update:', {
         employeeId: employee.employeeId,
         username: employee.username,
         newPasswordHash: employee.password,
       });
-
-      res.json({ message: "Password updated successfully" });
+  
+      res.json({ message: 'Password updated successfully' });
     } catch (error) {
-      console.error("Error changing password:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error('Error changing password:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   });
 
