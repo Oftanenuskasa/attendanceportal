@@ -91,6 +91,12 @@ module.exports = (transporter) => {
     try {
       const { username, password } = req.body;
 
+      if (!username || !password) {
+        return res
+          .status(400)
+          .json({ message: "Username and password are required" });
+      }
+
       const employee = await Employee.findOne({
         $or: [{ username }, { email: username }],
       });
@@ -102,18 +108,18 @@ module.exports = (transporter) => {
       console.log("Entered Password:", password);
       console.log("Stored Hashed Password:", employee.password);
 
-      const isMatch = await bcrypt.compare(password, employee.password);
+      const isMatch = await employee.comparePassword(password);
       console.log("Password match:", isMatch);
       if (!isMatch) {
         return res
-          .status(400)
+          .status(401)
           .json({ message: "Invalid username or password" });
       }
 
       const token = jwt.sign(
         {
-          roles: employee.roles,
           employeeId: employee.employeeId,
+          roles: employee.roles,
         },
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
@@ -128,7 +134,7 @@ module.exports = (transporter) => {
         photo: employee.photo,
       });
     } catch (error) {
-      console.error(error);
+      console.error("Login error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -311,11 +317,9 @@ module.exports = (transporter) => {
         !attendanceWindow.startTime ||
         !attendanceWindow.endTime
       ) {
-        return res
-          .status(400)
-          .json({
-            message: "Attendance window (startTime and endTime) is required",
-          });
+        return res.status(400).json({
+          message: "Attendance window (startTime and endTime) is required",
+        });
       }
       if (!Array.isArray(departments) || departments.length === 0) {
         return res
@@ -557,46 +561,43 @@ module.exports = (transporter) => {
         return res.status(400).json({ message: "All fields are required" });
       }
 
-      // Find employee using `employeeId` instead of `_id`
-      const employee = await Employee.findOne({
-        employeeId: req.user.employeeId,
-      });
-
-      console.log("Freshly Retrieved Hashed Password:", employee.password);
+      const employee = req.user; // Full document from auth middleware
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      // Compare the current password with the stored hash
-      const isMatch = await bcrypt.compare(currentPassword, employee.password);
+      console.log("Employee before update:", {
+        employeeId: employee.employeeId,
+        username: employee.username,
+        currentPasswordHash: employee.password,
+      });
+
+      const isMatch = await employee.comparePassword(currentPassword);
       if (!isMatch) {
         return res
           .status(400)
           .json({ message: "Current password is incorrect" });
       }
 
-      // Ensure new password is different
-      const isSamePassword = await bcrypt.compare(
-        newPassword,
-        employee.password
-      );
+      const isSamePassword = await employee.comparePassword(newPassword);
       if (isSamePassword) {
         return res
           .status(400)
           .json({
-            message: "New password must be different from the current password",
+            message: "New password must be different from current password",
           });
       }
 
-      // Hash the new password
-      employee.password = await bcrypt.hash(newPassword, 10);
+      // Set plain text password; pre('save') hook will hash it
+      employee.password = newPassword;
 
-      employee.markModified("password");
-
-      // Save the updated employee
       await employee.save();
 
-      console.log("Updated password successfully:", employee.password);
+      console.log("Employee after update:", {
+        employeeId: employee.employeeId,
+        username: employee.username,
+        newPasswordHash: employee.password,
+      });
 
       res.json({ message: "Password updated successfully" });
     } catch (error) {
