@@ -113,7 +113,6 @@ module.exports = (transporter) => {
         employeeId: employee.employeeId,
         photo: employee.photo,
       });
-      res.json({ token, message: 'Login successful' });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Server error' });
@@ -498,7 +497,7 @@ module.exports = (transporter) => {
       }
   
       // Fetch employee from database using ID from the JWT
-      const employee = await Employee.findById(req.user._id);
+      const employee = await Employee.findById(req.user.employeeId);
       if (!employee) {
         return res.status(404).json({ message: 'Employee not found' });
       }
