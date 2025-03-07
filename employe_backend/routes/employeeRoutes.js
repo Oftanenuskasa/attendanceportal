@@ -487,6 +487,47 @@ module.exports = (transporter) => {
     }
   });
 
+  router.post('/change-password', auth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      // Validation
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'All fields are required' });
+      }
+      
+      // Get user from database
+      const employee = await Employee.findOne({ employeeId: req.employee.employeeId });
+      if (!employee) {
+        return res.status(404).json({ message: 'Employee not found' });
+      }
+      
+      // Check if current password is correct
+      const isMatch = await employee.comparePassword(currentPassword);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+      
+      // Check if new password is the same as current password
+      const isSamePassword = await employee.comparePassword(newPassword);
+      if (isSamePassword) {
+        return res.status(400).json({ message: 'New password must be different from current password' });
+      }
+      
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      employee.password = await bcrypt.hash(newPassword, salt);
+      
+      // Save updated user
+      await employee.save();
+      
+      res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+  
   router.patch('/profile/edit-no-auth', upload.single('photo'), async (req, res) => {
     try {
       const { firstName, middleName, lastName, email, phoneNumber, dob, dateOfJoining, gender, addressJson, employeeId } = req.body;

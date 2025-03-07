@@ -1,6 +1,6 @@
 "use client";
 
-import { FiBell, FiMenu, FiSun, FiUser } from 'react-icons/fi';
+import { FiBell, FiMenu, FiSun, FiUser, FiLock } from 'react-icons/fi';
 import Link from 'next/link';
 import { FaCalendarAlt } from 'react-icons/fa';
 import atte2 from '@/Image/atte2.jpg';
@@ -14,6 +14,15 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const BASE_URL = "https://attendanceportal-3.onrender.com";
 
@@ -64,6 +73,97 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
 
   const handleNotificationToggle = () => {
     setIsNotificationOpen((prev) => !prev);
+  };
+
+  const handleChangePasswordToggle = () => {
+    setIsChangePasswordOpen((prev) => !prev);
+    setError('');
+    setSuccess('');
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleChangePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setError('All fields are required');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setError('New password must be at least 6 characters long');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const authData = JSON.parse(localStorage.getItem("auth-store") || "{}");
+      const token = authData.token;
+
+      if (!token) {
+        setError('You are not logged in');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${BASE_URL}/api/employees/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to change password');
+      }
+
+      setSuccess('Password changed successfully');
+      
+      // Clear form fields
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+
+      // Close modal after a delay
+      setTimeout(() => {
+        setIsChangePasswordOpen(false);
+      }, 2000);
+
+    } catch (error) {
+      setError(error.message || 'An error occurred while changing password');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -178,6 +278,12 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
                 Profile
               </Link>
               <button
+                onClick={handleChangePasswordToggle}
+                className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
+              >
+                Change Password
+              </button>
+              <button
                 onClick={handleLogout}
                 className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
               >
@@ -187,6 +293,101 @@ const Header = ({ setIsMenuOpen, isMenuOpen }) => {
           )}
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {isChangePasswordOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+                <FiLock className="mr-2" /> Change Password
+              </h2>
+              <button 
+                onClick={handleChangePasswordToggle}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+                {error}
+              </div>
+            )}
+            
+            {success && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mb-4">
+                {success}
+              </div>
+            )}
+            
+            <form onSubmit={handleChangePasswordSubmit}>
+              <div className="mb-4">
+                <label htmlFor="currentPassword" className="block text-gray-700 dark:text-gray-300 mb-1">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  id="currentPassword"
+                  name="currentPassword"
+                  value={passwordData.currentPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  required
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="newPassword" className="block text-gray-700 dark:text-gray-300 mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  required
+                />
+              </div>
+              
+              <div className="mb-6">
+                <label htmlFor="confirmPassword" className="block text-gray-700 dark:text-gray-300 mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  required
+                />
+              </div>
+              
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleChangePasswordToggle}
+                  className="px-4 py-2 mr-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                  disabled={loading}
+                >
+                  {loading ? 'Processing...' : 'Change Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

@@ -23,6 +23,72 @@ import { motion } from "framer-motion";
 import EmployeeModal from "./EmployeeModal";
 import ConfirmDialog from "./ConfirmDialog";
 
+// Validation utility function
+const validateField = (field, value) => {
+  const validations = {
+    firstName: {
+      required: true,
+      maxLength: 50,
+      minLength: 3,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+    middleName: {
+      maxLength: 50,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+    lastName: {
+      required: true,
+      maxLength: 50,
+      minLength: 3,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+    email: {
+      required: true,
+      maxLength: 100,
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    },
+    username: {
+      required: true,
+      minLength: 3,
+      maxLength: 30,
+      pattern: /^[a-zA-Z0-9_]*$/,
+    },
+    phoneNumber: {
+      maxLength: 15,
+      pattern: /^[0-9+-]*$/,
+    },
+    city: {
+      maxLength: 50,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+    zone: {
+      maxLength: 50,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+    region: {
+      maxLength: 50,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+    country: {
+      maxLength: 50,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+  };
+
+  const rules = validations[field];
+  if (!rules) return "";
+
+  if (rules.required && !value) return `${field} is required`;
+  if (rules.minLength && value.length < rules.minLength)
+    return `${field} must be at least ${rules.minLength} characters`;
+  if (rules.maxLength && value.length > rules.maxLength)
+    return `${field} cannot exceed ${rules.maxLength} characters`;
+  if (rules.pattern && value && !rules.pattern.test(value))
+    return `Invalid ${field} format`;
+
+  return "";
+};
+
 export default function EmployeList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [employee, setEmployee] = useState([]);
@@ -39,17 +105,16 @@ export default function EmployeList() {
     direction: "ascending",
   });
   const [filterStatus, setFilterStatus] = useState("all");
-  const [showEditModal, setShowEditModal] = useState(false); // New state for edit modal
-  const [editEmployee, setEditEmployee] = useState(null); // Employee being edited
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editEmployee, setEditEmployee] = useState(null);
+  const [errors, setErrors] = useState({});
   const router = useRouter();
 
-  // Get token from localStorage
   const getAuthToken = () => {
     const authData = JSON.parse(localStorage.getItem("auth-store"));
     return authData?.token || null;
   };
 
-  // Fetch employee data
   const fetchEmployeeData = async () => {
     try {
       setLoading(true);
@@ -63,14 +128,13 @@ export default function EmployeList() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log("Fetched Employee Data:", response.data);
-
       const formattedData = response.data.map((item) => ({
         employeeId: item.employeeId,
         firstName: item.firstName,
         middleName: item.middleName || "",
         lastName: item.lastName,
         email: item.email,
+        username: item.username || "",
         status: item.status,
       }));
 
@@ -92,7 +156,6 @@ export default function EmployeList() {
     fetchEmployeeData();
   }, [router]);
 
-  // Handle employee deletion
   const handleDelete = async (id) => {
     try {
       const token = getAuthToken();
@@ -127,7 +190,6 @@ export default function EmployeList() {
     }
   };
 
-  // Fetch complete employee details for viewing
   const fetchCompleteDetails = async (id) => {
     try {
       const token = getAuthToken();
@@ -137,7 +199,11 @@ export default function EmployeList() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setSelectedEmployee(response.data);
+      const employeeData = {
+        ...response.data,
+        username: response.data.username || ""
+      };
+      setSelectedEmployee(employeeData);
       setShowModal(true);
     } catch (error) {
       toast.error("Failed to fetch employee details");
@@ -149,7 +215,6 @@ export default function EmployeList() {
     }
   };
 
-  // Handle edit button click
   const handleEditClick = async (id) => {
     try {
       const token = getAuthToken();
@@ -159,8 +224,13 @@ export default function EmployeList() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setEditEmployee(response.data);
+      const employeeData = {
+        ...response.data,
+        username: response.data.username || ""
+      };
+      setEditEmployee(employeeData);
       setShowEditModal(true);
+      setErrors({});
     } catch (error) {
       toast.error("Failed to fetch employee details for editing");
       console.error("Error fetching employee for edit:", error);
@@ -171,9 +241,37 @@ export default function EmployeList() {
     }
   };
 
-  // Handle edit form submission
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    
+    const newErrors = {};
+    const fieldsToValidate = [
+      "firstName",
+      "middleName",
+      "lastName",
+      "email",
+      "username",
+      "phoneNumber",
+      "city",
+      "zone",
+      "region",
+      "country"
+    ];
+
+    fieldsToValidate.forEach(field => {
+      const value = field === "city" || field === "zone" || field === "region" || field === "country"
+        ? (editEmployee.address && editEmployee.address[0]?.[field]) || ""
+        : editEmployee[field] || "";
+      const error = validateField(field, value);
+      if (error) newErrors[field] = error;
+    });
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Please fix the validation errors");
+      return;
+    }
+
     try {
       const token = getAuthToken();
       if (!token) {
@@ -185,6 +283,7 @@ export default function EmployeList() {
       formData.append("middleName", editEmployee.middleName || "");
       formData.append("lastName", editEmployee.lastName);
       formData.append("email", editEmployee.email);
+      formData.append("username", editEmployee.username);
       formData.append("phoneNumber", editEmployee.phoneNumber || "");
       formData.append("dob", editEmployee.dob || "");
       formData.append("dateOfJoining", editEmployee.dateOfJoining || "");
@@ -214,6 +313,7 @@ export default function EmployeList() {
       toast.success("Employee updated successfully");
       setShowEditModal(false);
       setEditEmployee(null);
+      setErrors({});
       fetchEmployeeData();
     } catch (error) {
       console.error("Error updating employee:", error);
@@ -225,7 +325,6 @@ export default function EmployeList() {
     }
   };
 
-  // Export functions (unchanged)
   const exportToExcel = () => {
     if (filteredEmployee.length === 0) {
       toast.warn("No data available to export to Excel.");
@@ -292,7 +391,6 @@ export default function EmployeList() {
       .catch(() => toast.error("Failed to copy data."));
   };
 
-  // Sorting function
   const handleSort = (key) => {
     let direction = "ascending";
     if (sortConfig.key === key && sortConfig.direction === "ascending") {
@@ -319,7 +417,6 @@ export default function EmployeList() {
     setFilteredEmployee(sorted);
   };
 
-  // Search and filter effect
   useEffect(() => {
     const filtered = employee.filter((record) => {
       const searchString = searchQuery.toLowerCase();
@@ -327,7 +424,8 @@ export default function EmployeList() {
         record.firstName?.toLowerCase().includes(searchString) ||
         record.lastName?.toLowerCase().includes(searchString) ||
         record.employeeId?.toString().includes(searchString) ||
-        record.email?.toLowerCase().includes(searchString);
+        record.email?.toLowerCase().includes(searchString) ||
+        record.username?.toLowerCase().includes(searchString);
 
       const matchesStatus =
         filterStatus === "all" ? true : record.status === filterStatus;
@@ -338,7 +436,6 @@ export default function EmployeList() {
     setCurrentPage(1);
   }, [searchQuery, employee, filterStatus]);
 
-  // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredEmployee.slice(
@@ -347,7 +444,6 @@ export default function EmployeList() {
   );
   const totalPages = Math.ceil(filteredEmployee.length / itemsPerPage);
 
-  // Animation variants
   const tableVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
@@ -355,7 +451,6 @@ export default function EmployeList() {
 
   return (
     <div className="container mx-auto px-4 py-8 mt-12 bg-gradient-to-br from-gray-50 to-indigo-50">
-      {/* Header and Controls */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-6 text-gray-800">Employee List</h1>
         <div className="flex justify-end space-x-2">
@@ -407,7 +502,6 @@ export default function EmployeList() {
         </div>
       </div>
 
-      {/* Search and Filters */}
       <div className="flex flex-wrap justify-end gap-4 mb-6">
         <input
           type="text"
@@ -429,7 +523,6 @@ export default function EmployeList() {
         </select>
       </div>
 
-      {/* Employee Table */}
       <motion.div
         variants={tableVariants}
         initial="hidden"
@@ -560,7 +653,6 @@ export default function EmployeList() {
         </table>
       </motion.div>
 
-      {/* Pagination */}
       <div className="mt-6 flex justify-between items-center text-gray-700">
         <span>
           Showing {indexOfFirstItem + 1} to{" "}
@@ -591,7 +683,6 @@ export default function EmployeList() {
         </div>
       </div>
 
-      {/* Modals */}
       {showModal && (
         <EmployeeModal
           employee={selectedEmployee}
@@ -614,7 +705,6 @@ export default function EmployeList() {
         />
       )}
 
-      {/* Edit Modal */}
       {showEditModal && editEmployee && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -636,7 +726,6 @@ export default function EmployeList() {
 
             <form onSubmit={handleEditSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column */}
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -645,15 +734,24 @@ export default function EmployeList() {
                     <input
                       type="text"
                       value={editEmployee.firstName}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setEditEmployee({
                           ...editEmployee,
                           firstName: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        });
+                        setErrors({
+                          ...errors,
+                          firstName: validateField("firstName", e.target.value)
+                        });
+                      }}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                        errors.firstName ? "border-red-500" : "border-gray-300"
+                      }`}
                       required
                     />
+                    {errors.firstName && (
+                      <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
+                    )}
                   </div>
 
                   <div>
@@ -663,14 +761,23 @@ export default function EmployeList() {
                     <input
                       type="text"
                       value={editEmployee.middleName || ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setEditEmployee({
                           ...editEmployee,
                           middleName: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        });
+                        setErrors({
+                          ...errors,
+                          middleName: validateField("middleName", e.target.value)
+                        });
+                      }}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                        errors.middleName ? "border-red-500" : "border-gray-300"
+                      }`}
                     />
+                    {errors.middleName && (
+                      <p className="text-red-500 text-xs mt-1">{errors.middleName}</p>
+                    )}
                   </div>
 
                   <div>
@@ -680,15 +787,24 @@ export default function EmployeList() {
                     <input
                       type="text"
                       value={editEmployee.lastName}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setEditEmployee({
                           ...editEmployee,
                           lastName: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        });
+                        setErrors({
+                          ...errors,
+                          lastName: validateField("lastName", e.target.value)
+                        });
+                      }}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                        errors.lastName ? "border-red-500" : "border-gray-300"
+                      }`}
                       required
                     />
+                    {errors.lastName && (
+                      <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
+                    )}
                   </div>
 
                   <div>
@@ -698,15 +814,51 @@ export default function EmployeList() {
                     <input
                       type="email"
                       value={editEmployee.email}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setEditEmployee({
                           ...editEmployee,
                           email: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        });
+                        setErrors({
+                          ...errors,
+                          email: validateField("email", e.target.value)
+                        });
+                      }}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                        errors.email ? "border-red-500" : "border-gray-300"
+                      }`}
                       required
                     />
+                    {errors.email && (
+                      <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Username *
+                    </label>
+                    <input
+                      type="text"
+                      value={editEmployee.username || ""}
+                      onChange={(e) => {
+                        setEditEmployee({
+                          ...editEmployee,
+                          username: e.target.value,
+                        });
+                        setErrors({
+                          ...errors,
+                          username: validateField("username", e.target.value)
+                        });
+                      }}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                        errors.username ? "border-red-500" : "border-gray-300"
+                      }`}
+                      required
+                    />
+                    {errors.username && (
+                      <p className="text-red-500 text-xs mt-1">{errors.username}</p>
+                    )}
                   </div>
 
                   <div>
@@ -716,18 +868,26 @@ export default function EmployeList() {
                     <input
                       type="text"
                       value={editEmployee.phoneNumber || ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setEditEmployee({
                           ...editEmployee,
                           phoneNumber: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        });
+                        setErrors({
+                          ...errors,
+                          phoneNumber: validateField("phoneNumber", e.target.value)
+                        });
+                      }}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                        errors.phoneNumber ? "border-red-500" : "border-gray-300"
+                      }`}
                     />
+                    {errors.phoneNumber && (
+                      <p className="text-red-500 text-xs mt-1">{errors.phoneNumber}</p>
+                    )}
                   </div>
                 </div>
 
-                {/* Right Column */}
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -812,7 +972,6 @@ export default function EmployeList() {
                     />
                   </div>
 
-                  {/* Address Fields */}
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -830,14 +989,23 @@ export default function EmployeList() {
                             ...editEmployee,
                             address: [
                               {
-                                ...editEmployee.address[0],
+                                ...editEmployee.address?.[0],
                                 city: e.target.value,
                               },
                             ],
+                          }) &&
+                          setErrors({
+                            ...errors,
+                            city: validateField("city", e.target.value)
                           })
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                          errors.city ? "border-red-500" : "border-gray-300"
+                        }`}
                       />
+                      {errors.city && (
+                        <p className="text-red-500 text-xs mt-1">{errors.city}</p>
+                      )}
                     </div>
 
                     <div>
@@ -856,14 +1024,23 @@ export default function EmployeList() {
                             ...editEmployee,
                             address: [
                               {
-                                ...editEmployee.address[0],
+                                ...editEmployee.address?.[0],
                                 zone: e.target.value,
                               },
                             ],
+                          }) &&
+                          setErrors({
+                            ...errors,
+                            zone: validateField("zone", e.target.value)
                           })
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                          errors.zone ? "border-red-500" : "border-gray-300"
+                        }`}
                       />
+                      {errors.zone && (
+                        <p className="text-red-500 text-xs mt-1">{errors.zone}</p>
+                      )}
                     </div>
 
                     <div>
@@ -882,14 +1059,23 @@ export default function EmployeList() {
                             ...editEmployee,
                             address: [
                               {
-                                ...editEmployee.address[0],
+                                ...editEmployee.address?.[0],
                                 region: e.target.value,
                               },
                             ],
+                          }) &&
+                          setErrors({
+                            ...errors,
+                            region: validateField("region", e.target.value)
                           })
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                          errors.region ? "border-red-500" : "border-gray-300"
+                        }`}
                       />
+                      {errors.region && (
+                        <p className="text-red-500 text-xs mt-1">{errors.region}</p>
+                      )}
                     </div>
 
                     <div>
@@ -908,20 +1094,28 @@ export default function EmployeList() {
                             ...editEmployee,
                             address: [
                               {
-                                ...editEmployee.address[0],
+                                ...editEmployee.address?.[0],
                                 country: e.target.value,
                               },
                             ],
+                          }) &&
+                          setErrors({
+                            ...errors,
+                            country: validateField("country", e.target.value)
                           })
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
+                          errors.country ? "border-red-500" : "border-gray-300"
+                        }`}
                       />
+                      {errors.country && (
+                        <p className="text-red-500 text-xs mt-1">{errors.country}</p>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Buttons */}
               <div className="mt-8 flex justify-end space-x-3 border-t border-gray-200 pt-6">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -930,6 +1124,7 @@ export default function EmployeList() {
                   onClick={() => {
                     setShowEditModal(false);
                     setEditEmployee(null);
+                    setErrors({});
                   }}
                   className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200 font-medium"
                 >

@@ -17,14 +17,65 @@ import {
   X,
 } from "lucide-react";
 
+// Validation utility function
+const validateField = (field, value) => {
+  const validations = {
+    firstName: {
+      required: true,
+      maxLength: 50,
+      minLength: 3,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+    middleName: {
+      maxLength: 50,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+    lastName: {
+      required: true,
+      maxLength: 50,
+      minLength: 3,
+      pattern: /^[a-zA-Z\s-]*$/,
+    },
+    email: {
+      required: true,
+      maxLength: 100,
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    },
+    phoneNumber: {
+      maxLength: 15,
+      pattern: /^[0-9+-]*$/,
+    },
+    dob: {
+      max: new Date().toISOString().split("T")[0], // Can't be future date
+    },
+    dateOfJoining: {
+      max: new Date().toISOString().split("T")[0], // Can't be future date
+    },
+  };
+
+  const rules = validations[field];
+  if (!rules) return "";
+
+  if (rules.required && !value) return `${field} is required`;
+  if (rules.minLength && value.length < rules.minLength)
+    return `${field} must be at least ${rules.minLength} characters`;
+  if (rules.maxLength && value.length > rules.maxLength)
+    return `${field} cannot exceed ${rules.maxLength} characters`;
+  if (rules.pattern && value && !rules.pattern.test(value))
+    return `Invalid ${field} format`;
+  if (rules.max && value > rules.max) return `${field} cannot be a future date`;
+
+  return "";
+};
+
 const Profile = () => {
   const [user, setUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
+  const [errors, setErrors] = useState({});
   const router = useRouter();
-  const BASE_URL = "https://attendanceportal-3.onrender.com"; // Backend base URL
+  const BASE_URL = "https://attendanceportal-3.onrender.com";
 
-  // Fetch profile data
   useEffect(() => {
     const fetchProfile = async () => {
       const authData = JSON.parse(localStorage.getItem("auth-store"));
@@ -42,7 +93,7 @@ const Profile = () => {
 
         console.log("Profile API response:", response.data);
         setUser(response.data);
-        setFormData(response.data); // Initialize form data with fetched profile
+        setFormData(response.data);
       } catch (error) {
         console.error(error);
         if (error.response?.status === 401) {
@@ -74,21 +125,53 @@ const Profile = () => {
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
+    let newValue;
+
     if (type === "file") {
-      setFormData((prev) => ({ ...prev, [name]: files[0] }));
+      newValue = files[0];
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      newValue = value;
     }
+
+    setFormData((prev) => ({ ...prev, [name]: newValue }));
+
+    // Validate the changed field
+    const error = validateField(name, newValue);
+    setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!user || !user.employeeId) {
       toast.error("No employee data available to edit");
       return;
     }
-  
+
+    // Validate all fields
+    const newErrors = {};
+    const fieldsToValidate = [
+      "firstName",
+      "middleName",
+      "lastName",
+      "email",
+      "phoneNumber",
+      "dob",
+      "dateOfJoining",
+    ];
+
+    fieldsToValidate.forEach((field) => {
+      const value = formData[field] || "";
+      const error = validateField(field, value);
+      if (error) newErrors[field] = error;
+    });
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Please fix the validation errors");
+      return;
+    }
+
     const formDataToSend = new FormData();
     Object.keys(formData).forEach((key) => {
       if (key === "photo" && formData.photo instanceof File) {
@@ -107,38 +190,36 @@ const Profile = () => {
       }
     });
     formDataToSend.append("employeeId", user.employeeId);
-  
+
     try {
       console.log("FormData being sent:", Array.from(formDataToSend.entries()));
+      const authData = JSON.parse(localStorage.getItem("auth-store"));
       const response = await axios.patch(
         `${BASE_URL}/api/employees/profile/edit-no-auth`,
         formDataToSend,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${authData.token}`,
           },
         }
       );
-  
+
       console.log("Profile updated:", response.data);
       setUser(response.data);
       setIsEditing(false);
-  
-      // Update localStorage with the new user data
-      const authData = JSON.parse(localStorage.getItem("auth-store") || "{}");
+
       const updatedAuthData = {
         ...authData,
         user: {
           ...authData.user,
-          ...response.data, // Merge updated fields
+          ...response.data,
         },
       };
       localStorage.setItem("auth-store", JSON.stringify(updatedAuthData));
       console.log("Updated auth-store:", updatedAuthData);
-  
+
       toast.success("Profile updated successfully!");
-  
-      // Trigger storage event to notify other components (like Header)
       window.dispatchEvent(new Event("storage"));
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -168,7 +249,6 @@ const Profile = () => {
         transition={{ duration: 0.5 }}
         className="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full"
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-gray-800 flex items-center">
             <User className="w-8 h-8 mr-3 text-indigo-600" /> Your Profile
@@ -178,7 +258,6 @@ const Profile = () => {
           </span>
         </div>
 
-        {/* Profile Card or Edit Form */}
         {isEditing ? (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -187,18 +266,23 @@ const Profile = () => {
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleChange}
+                required
+                error={errors.firstName}
               />
               <InputField
                 label="Middle Name"
                 name="middleName"
                 value={formData.middleName}
                 onChange={handleChange}
+                error={errors.middleName}
               />
               <InputField
                 label="Last Name"
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleChange}
+                required
+                error={errors.lastName}
               />
               <InputField
                 label="Email"
@@ -206,6 +290,8 @@ const Profile = () => {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
+                required
+                error={errors.email}
               />
               <InputField
                 label="Phone Number"
@@ -213,6 +299,7 @@ const Profile = () => {
                 type="tel"
                 value={formData.phoneNumber}
                 onChange={handleChange}
+                error={errors.phoneNumber}
               />
               <InputField
                 label="Date of Birth"
@@ -220,6 +307,7 @@ const Profile = () => {
                 type="date"
                 value={formData.dob ? formData.dob.split("T")[0] : ""}
                 onChange={handleChange}
+                error={errors.dob}
               />
               <InputField
                 label="Date of Joining"
@@ -231,6 +319,7 @@ const Profile = () => {
                     : ""
                 }
                 onChange={handleChange}
+                error={errors.dateOfJoining}
               />
               <SelectField
                 label="Gender"
@@ -256,7 +345,11 @@ const Profile = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 type="button"
-                onClick={() => setIsEditing(false)}
+                onClick={() => {
+                  setIsEditing(false);
+                  setErrors({});
+                  setFormData(user); // Reset form data to original user data
+                }}
                 className="px-6 py-2 bg-gray-500 text-white rounded-lg shadow-md hover:bg-gray-600 transition-colors"
               >
                 <X className="inline mr-2" /> Cancel
@@ -273,7 +366,6 @@ const Profile = () => {
           </form>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Photo Section */}
             <motion.div
               whileHover={{ scale: 1.05 }}
               className="col-span-1 flex flex-col items-center"
@@ -298,7 +390,6 @@ const Profile = () => {
               </p>
             </motion.div>
 
-            {/* Details Section */}
             <div className="col-span-2 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <ProfileField
@@ -349,7 +440,6 @@ const Profile = () => {
           </div>
         )}
 
-        {/* Edit Button (shown only in view mode) */}
         {!isEditing && (
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -365,7 +455,6 @@ const Profile = () => {
   );
 };
 
-// Reusable Profile Field Component
 const ProfileField = ({ icon, label, value, statusColor }) => (
   <motion.div
     whileHover={{ x: 5 }}
@@ -385,7 +474,6 @@ const ProfileField = ({ icon, label, value, statusColor }) => (
   </motion.div>
 );
 
-// Reusable Input Field Component
 const InputField = ({
   label,
   name,
@@ -394,24 +482,27 @@ const InputField = ({
   onChange,
   required,
   accept,
+  error,
 }) => (
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-1">
-      {label}
+      {label} {required && <span className="text-red-500">*</span>}
     </label>
     <input
       type={type}
       name={name}
-      value={type !== "file" ? value : undefined}
+      value={type !== "file" ? value || "" : undefined}
       onChange={onChange}
       required={required}
       accept={accept}
-      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      className={`w-full px-3 py-2 border rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+        error ? "border-red-500" : "border-gray-300"
+      }`}
     />
+    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
   </div>
 );
 
-// Reusable Select Field Component
 const SelectField = ({ label, name, value, onChange, options }) => (
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -419,7 +510,7 @@ const SelectField = ({ label, name, value, onChange, options }) => (
     </label>
     <select
       name={name}
-      value={value}
+      value={value || ""}
       onChange={onChange}
       className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
     >
