@@ -95,9 +95,10 @@ module.exports = (transporter) => {
       }
 
       const isMatch = await employee.comparePassword(password);
-      if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
+    if (!isMatch) {
+      console.log('Password mismatch for user:', username); // Debug log
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
       const token = jwt.sign(
         { id: employee._id.toString(), roles: employee.roles, employeeId: employee.employeeId },
@@ -491,37 +492,33 @@ module.exports = (transporter) => {
   router.post('/change-password', auth, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
-      
-      // Validation
+  
       if (!currentPassword || !newPassword) {
         return res.status(400).json({ message: 'All fields are required' });
       }
-      
-      // Get user from database
-      const employee = await Employee.findOne({ employeeId: req.user.employeeId });
+  
+      const employee = req.user;
       if (!employee) {
         return res.status(404).json({ message: 'Employee not found' });
       }
-      
-      // Check if current password is correct
+  
       const isMatch = await employee.comparePassword(currentPassword);
       if (!isMatch) {
         return res.status(400).json({ message: 'Current password is incorrect' });
       }
-      
-      // Check if new password is the same as current password
+  
       const isSamePassword = await employee.comparePassword(newPassword);
       if (isSamePassword) {
         return res.status(400).json({ message: 'New password must be different from current password' });
       }
-      
-      // Hash the new password
+  
       const salt = await bcrypt.genSalt(10);
-      employee.password = await bcrypt.hash(newPassword, salt);
-      
-      // Save updated user
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      employee.password = hashedPassword;
       await employee.save();
-      
+  
+      console.log('Updated employee password hash:', employee.password); // Debug log
+  
       res.json({ message: 'Password updated successfully' });
     } catch (error) {
       console.error('Error changing password:', error);
