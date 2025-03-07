@@ -94,11 +94,10 @@ module.exports = (transporter) => {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      const isMatch = await employee.comparePassword(password);
-    if (!isMatch) {
-      console.log('Password mismatch for user:', username); // Debug log
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+      const isMatch = await bcrypt.compare(password, employee.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Invalid username or password' });
+      }
 
       const token = jwt.sign(
         { id: employee._id.toString(), roles: employee.roles, employeeId: employee.employeeId },
@@ -114,6 +113,7 @@ module.exports = (transporter) => {
         employeeId: employee.employeeId,
         photo: employee.photo,
       });
+      res.json({ token, message: 'Login successful' });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Server error' });
@@ -497,27 +497,30 @@ module.exports = (transporter) => {
         return res.status(400).json({ message: 'All fields are required' });
       }
   
-      const employee = req.user;
+      // Fetch employee from database using ID from the JWT
+      const employee = await Employee.findById(req.user._id);
       if (!employee) {
         return res.status(404).json({ message: 'Employee not found' });
       }
   
-      const isMatch = await employee.comparePassword(currentPassword);
+      // Compare the current password with the stored hash
+      const isMatch = await bcrypt.compare(currentPassword, employee.password);
       if (!isMatch) {
         return res.status(400).json({ message: 'Current password is incorrect' });
       }
   
-      const isSamePassword = await employee.comparePassword(newPassword);
+      // Ensure new password is different
+      const isSamePassword = await bcrypt.compare(newPassword, employee.password);
       if (isSamePassword) {
-        return res.status(400).json({ message: 'New password must be different from current password' });
+        return res.status(400).json({ message: 'New password must be different from the current password' });
       }
   
+      // Hash the new password
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(newPassword, salt);
-      employee.password = hashedPassword;
-      await employee.save();
+      employee.password = await bcrypt.hash(newPassword, salt);
   
-      console.log('Updated employee password hash:', employee.password); // Debug log
+      // Save the updated employee
+      await employee.save();
   
       res.json({ message: 'Password updated successfully' });
     } catch (error) {
@@ -526,6 +529,7 @@ module.exports = (transporter) => {
     }
   });
   
+
   router.patch('/profile/edit-no-auth', upload.single('photo'), async (req, res) => {
     try {
       const { firstName, middleName, lastName, email, phoneNumber, dob, dateOfJoining, gender, addressJson, employeeId } = req.body;
