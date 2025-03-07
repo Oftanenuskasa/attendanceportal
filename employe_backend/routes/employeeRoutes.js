@@ -1,16 +1,16 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const Employee = require('../models/Employee');
-const Attendance = require('../models/Attendance');
-const upload = require('../middleware/upload');
+const bcrypt = require("bcryptjs");
+const Employee = require("../models/Employee");
+const Attendance = require("../models/Attendance");
+const upload = require("../middleware/upload");
 const Settings = require("../models/Settings");
-const auth = require('../middleware/auth');
-const jwt = require('jsonwebtoken');
+const auth = require("../middleware/auth");
+const jwt = require("jsonwebtoken");
 
 // Export routes as a function that accepts transporter
 module.exports = (transporter) => {
-  router.post('/create', upload.single('photo'), async (req, res) => {
+  router.post("/create", upload.single("photo"), async (req, res) => {
     try {
       const {
         firstName,
@@ -35,7 +35,10 @@ module.exports = (transporter) => {
       let parsedAddress = [];
       if (addressJson) {
         try {
-          const parsed = typeof addressJson === 'string' ? JSON.parse(addressJson) : addressJson;
+          const parsed =
+            typeof addressJson === "string"
+              ? JSON.parse(addressJson)
+              : addressJson;
           if (parsed && Object.keys(parsed).length > 0) {
             parsedAddress = [parsed];
           }
@@ -52,19 +55,19 @@ module.exports = (transporter) => {
 
       const employeeData = {
         firstName,
-        middleName: middleName || '',
+        middleName: middleName || "",
         lastName,
         username,
         dateOfJoining: dateOfJoining || null,
         email,
         password, // Will be hashed by pre-save hook
-        phoneNumber: phoneNumber || '',
-        status: status || 'ACTIVE',
+        phoneNumber: phoneNumber || "",
+        status: status || "ACTIVE",
         dob: dob || null,
-        gender: gender || '',
+        gender: gender || "",
         address: parsedAddress,
         photo: req.file ? req.file.path : photoUrl || null,
-        roles: roles && Array.isArray(roles) ? roles : ['EMPLOYEE'],
+        roles: roles && Array.isArray(roles) ? roles : ["EMPLOYEE"],
       };
 
       console.log("Employee data to save:", employeeData);
@@ -72,17 +75,19 @@ module.exports = (transporter) => {
       const employee = new Employee(employeeData);
       await employee.save();
 
-      res.status(201).json({ message: 'Employee created successfully', employee });
+      res
+        .status(201)
+        .json({ message: "Employee created successfully", employee });
     } catch (error) {
-      console.error('Error creating employee:', error);
+      console.error("Error creating employee:", error);
       if (error.code === 11000) {
-        return res.status(400).json({ message: 'Duplicate username or email' });
+        return res.status(400).json({ message: "Duplicate username or email" });
       }
-      res.status(500).json({ message: error.message || 'Server error' });
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 
-  router.post('/login', async (req, res) => {
+  router.post("/login", async (req, res) => {
     try {
       const { username, password } = req.body;
 
@@ -91,18 +96,24 @@ module.exports = (transporter) => {
       });
 
       if (!employee) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ message: "Invalid credentials" });
       }
 
       const isMatch = await bcrypt.compare(password, employee.password);
       if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid username or password' });
+        return res
+          .status(400)
+          .json({ message: "Invalid username or password" });
       }
 
       const token = jwt.sign(
-        { id: employee._id.toString(), roles: employee.roles, employeeId: employee.employeeId },
+        {
+          id: employee._id.toString(),
+          roles: employee.roles,
+          employeeId: employee.employeeId,
+        },
         process.env.JWT_SECRET,
-        { expiresIn: '1h' }
+        { expiresIn: "1h" }
       );
 
       res.status(200).json({
@@ -115,106 +126,117 @@ module.exports = (transporter) => {
       });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  router.get('/profile', auth, async (req, res) => {
+  router.get("/profile", auth, async (req, res) => {
     try {
-      console.log('req.user:', req.user);
-      const employee = await Employee.findOne({ employeeId: req.user.employeeId }).select('-password');
+      console.log("req.user:", req.user);
+      const employee = await Employee.findOne({
+        employeeId: req.user.employeeId,
+      }).select("-password");
       if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
+        return res.status(404).json({ message: "Employee not found" });
       }
 
-      console.log('Raw employee data from DB:', employee.toObject());
+      console.log("Raw employee data from DB:", employee.toObject());
 
       const responseData = {
         employeeId: employee.employeeId,
         firstName: employee.firstName,
-        middleName: employee.middleName || '',
+        middleName: employee.middleName || "",
         lastName: employee.lastName,
         username: employee.username,
         email: employee.email,
         dateOfJoining: employee.dateOfJoining || null,
         dob: employee.dob || null,
-        gender: employee.gender || '',
+        gender: employee.gender || "",
         address: employee.address || [],
-        phoneNumber: employee.phoneNumber || '',
-        status: employee.status || 'ACTIVE',
+        phoneNumber: employee.phoneNumber || "",
+        status: employee.status || "ACTIVE",
         photo: employee.photo || null,
-        roles: employee.roles || ['EMPLOYEE'],
+        roles: employee.roles || ["EMPLOYEE"],
       };
 
-      console.log('Sending profile response:', responseData);
+      console.log("Sending profile response:", responseData);
       res.json(responseData);
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      res.status(500).json({ message: 'Server error' });
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  router.patch('/profile/edit-no-auth', upload.single('photo'), async (req, res) => {
-    try {
-      const {
-        firstName,
-        middleName,
-        lastName,
-        email,
-        phoneNumber,
-        dob,
-        dateOfJoining,
-        gender,
-        addressJson,
-        employeeId,
-      } = req.body;
+  router.patch(
+    "/profile/edit-no-auth",
+    upload.single("photo"),
+    async (req, res) => {
+      try {
+        const {
+          firstName,
+          middleName,
+          lastName,
+          email,
+          phoneNumber,
+          dob,
+          dateOfJoining,
+          gender,
+          addressJson,
+          employeeId,
+        } = req.body;
 
-      console.log("Request body:", req.body);
-      console.log("Uploaded file:", req.file);
+        console.log("Request body:", req.body);
+        console.log("Uploaded file:", req.file);
 
-      let parsedAddress = [];
-      if (addressJson) {
-        parsedAddress = typeof addressJson === 'string' ? JSON.parse(addressJson) : addressJson;
-        console.log("Parsed address:", parsedAddress);
+        let parsedAddress = [];
+        if (addressJson) {
+          parsedAddress =
+            typeof addressJson === "string"
+              ? JSON.parse(addressJson)
+              : addressJson;
+          console.log("Parsed address:", parsedAddress);
+        }
+
+        const updateData = {
+          firstName,
+          middleName,
+          lastName,
+          email,
+          phoneNumber,
+          dob,
+          dateOfJoining,
+          gender,
+          address: Array.isArray(parsedAddress)
+            ? parsedAddress
+            : [parsedAddress],
+          ...(req.file && { photo: req.file.path }),
+        };
+
+        console.log("Updating employee with employeeId:", employeeId);
+        console.log("Update data:", updateData);
+
+        const employee = await Employee.findOneAndUpdate(
+          { employeeId },
+          updateData,
+          { new: true, runValidators: true }
+        ).select("-password");
+
+        if (!employee) {
+          return res.status(404).json({ message: "Employee not found" });
+        }
+
+        res.json(employee);
+      } catch (error) {
+        console.error("Error updating profile:", error);
+        if (error.name === "ValidationError") {
+          return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: "Server error" });
       }
-
-      const updateData = {
-        firstName,
-        middleName,
-        lastName,
-        email,
-        phoneNumber,
-        dob,
-        dateOfJoining,
-        gender,
-        address: Array.isArray(parsedAddress) ? parsedAddress : [parsedAddress],
-        ...(req.file && { photo: req.file.path }),
-      };
-
-      console.log("Updating employee with employeeId:", employeeId);
-      console.log("Update data:", updateData);
-
-      const employee = await Employee.findOneAndUpdate(
-        { employeeId },
-        updateData,
-        { new: true, runValidators: true }
-      ).select('-password');
-
-      if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
-      }
-
-      res.json(employee);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      if (error.name === 'ValidationError') {
-        return res.status(400).json({ message: error.message });
-      }
-      res.status(500).json({ message: 'Server error' });
     }
-  });
+  );
 
-  router.post('/attendance', auth, async (req, res) => {
+  router.post("/attendance", auth, async (req, res) => {
     try {
       const { name, department, status } = req.body;
       const employeeId = req.user.employeeId;
@@ -230,7 +252,9 @@ module.exports = (transporter) => {
       });
 
       if (existingAttendance) {
-        return res.status(400).json({ message: 'Attendance already marked for today' });
+        return res
+          .status(400)
+          .json({ message: "Attendance already marked for today" });
       }
 
       const attendance = new Attendance({
@@ -242,20 +266,24 @@ module.exports = (transporter) => {
       });
 
       await attendance.save();
-      res.status(201).json({ message: 'Attendance marked successfully', attendance });
+      res
+        .status(201)
+        .json({ message: "Attendance marked successfully", attendance });
     } catch (error) {
       console.error(error);
       if (error.code === 11000) {
-        return res.status(400).json({ message: 'Attendance already marked for today' });
+        return res
+          .status(400)
+          .json({ message: "Attendance already marked for today" });
       }
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
   // Consolidated /attendance GET route
-  router.get('/attendance', auth, async (req, res) => {
+  router.get("/attendance", auth, async (req, res) => {
     try {
-      const isAdmin = req.user.roles.includes('ADMIN');
+      const isAdmin = req.user.roles.includes("ADMIN");
       let attendance;
 
       if (isAdmin) {
@@ -267,7 +295,7 @@ module.exports = (transporter) => {
       res.json(attendance);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -275,16 +303,31 @@ module.exports = (transporter) => {
     try {
       const { attendanceWindow, departments } = req.body;
 
-      if (!attendanceWindow || !attendanceWindow.startTime || !attendanceWindow.endTime) {
-        return res.status(400).json({ message: "Attendance window (startTime and endTime) is required" });
+      if (
+        !attendanceWindow ||
+        !attendanceWindow.startTime ||
+        !attendanceWindow.endTime
+      ) {
+        return res
+          .status(400)
+          .json({
+            message: "Attendance window (startTime and endTime) is required",
+          });
       }
       if (!Array.isArray(departments) || departments.length === 0) {
-        return res.status(400).json({ message: "Departments must be a non-empty array" });
+        return res
+          .status(400)
+          .json({ message: "Departments must be a non-empty array" });
       }
 
       const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-      if (!timeRegex.test(attendanceWindow.startTime) || !timeRegex.test(attendanceWindow.endTime)) {
-        return res.status(400).json({ message: "Invalid time format. Use HH:MM (24-hour)" });
+      if (
+        !timeRegex.test(attendanceWindow.startTime) ||
+        !timeRegex.test(attendanceWindow.endTime)
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Invalid time format. Use HH:MM (24-hour)" });
       }
 
       const existingSettings = await Settings.findOne();
@@ -320,7 +363,7 @@ module.exports = (transporter) => {
     }
   });
 
-  router.post('/support', auth, async (req, res) => {
+  router.post("/support", auth, async (req, res) => {
     try {
       const { subject, message } = req.body;
       res.json({ message: "Support message sent" });
@@ -329,16 +372,18 @@ module.exports = (transporter) => {
     }
   });
 
-  router.get('/attendance/history', auth, async (req, res) => {
+  router.get("/attendance/history", auth, async (req, res) => {
     try {
       const { employeeId, startDate, endDate } = req.query;
       if (!employeeId || !startDate || !endDate) {
-        return res.status(400).json({ message: 'Employee ID and date range are required' });
+        return res
+          .status(400)
+          .json({ message: "Employee ID and date range are required" });
       }
 
       const employee = await Employee.findOne({ employeeId });
       if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
+        return res.status(404).json({ message: "Employee not found" });
       }
 
       const start = new Date(startDate);
@@ -354,34 +399,36 @@ module.exports = (transporter) => {
       res.json(attendance);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  router.get('/', auth, async (req, res) => {
+  router.get("/", auth, async (req, res) => {
     try {
-      const employees = await Employee.find().select('-password');
+      const employees = await Employee.find().select("-password");
       res.json(employees);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  router.get('/:employeeId', auth, async (req, res) => {
+  router.get("/:employeeId", auth, async (req, res) => {
     try {
-      const employee = await Employee.findOne({ employeeId: req.params.employeeId }).select('-password');
+      const employee = await Employee.findOne({
+        employeeId: req.params.employeeId,
+      }).select("-password");
       if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
+        return res.status(404).json({ message: "Employee not found" });
       }
       res.json(employee);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  router.patch('/:employeeId/deactivate', auth, async (req, res) => {
+  router.patch("/:employeeId/deactivate", auth, async (req, res) => {
     try {
       const { employeeId } = req.params;
       const { status } = req.body;
@@ -393,36 +440,41 @@ module.exports = (transporter) => {
       );
 
       if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
+        return res.status(404).json({ message: "Employee not found" });
       }
 
-      res.json({ message: 'Employee deactivated successfully', employee });
+      res.json({ message: "Employee deactivated successfully", employee });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  router.delete('/:employeeId', auth, async (req, res) => {
+  router.delete("/:employeeId", auth, async (req, res) => {
     try {
-      const employee = await Employee.findOne({ employeeId: req.params.employeeId });
+      const employee = await Employee.findOne({
+        employeeId: req.params.employeeId,
+      });
       if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
+        return res.status(404).json({ message: "Employee not found" });
       }
       await Employee.deleteOne({ employeeId: req.params.employeeId });
       await Attendance.deleteMany({ employeeId: employee._id });
-      res.json({ message: 'Employee deleted successfully' });
+      res.json({ message: "Employee deleted successfully" });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  router.post('/reset-password', async (req, res) => {
+  router.post("/reset-password", async (req, res) => {
     const { token, password } = req.body;
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "your-secret-key"
+      );
       const employee = await Employee.findOne({
         employeeId: decoded.employeeId,
         resetToken: token,
@@ -430,7 +482,9 @@ module.exports = (transporter) => {
       });
 
       if (!employee) {
-        return res.status(400).json({ message: 'Invalid or expired reset token' });
+        return res
+          .status(400)
+          .json({ message: "Invalid or expired reset token" });
       }
 
       employee.password = password;
@@ -438,34 +492,36 @@ module.exports = (transporter) => {
       employee.resetTokenExpiration = undefined;
       await employee.save();
 
-      res.status(200).json({ message: 'Password reset successfully' });
+      res.status(200).json({ message: "Password reset successfully" });
     } catch (error) {
       console.error(error);
-      if (error.name === 'JsonWebTokenError') {
-        return res.status(400).json({ message: 'Invalid reset token' });
+      if (error.name === "JsonWebTokenError") {
+        return res.status(400).json({ message: "Invalid reset token" });
       }
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  router.post('/forgot-password', async (req, res) => {
+  router.post("/forgot-password", async (req, res) => {
     const { username } = req.body;
     try {
       if (!username) {
-        return res.status(400).json({ message: 'Username or email is required' });
+        return res
+          .status(400)
+          .json({ message: "Username or email is required" });
       }
 
       const employee = await Employee.findOne({
         $or: [{ username }, { email: username }],
       });
       if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
+        return res.status(404).json({ message: "Employee not found" });
       }
 
       const resetToken = jwt.sign(
         { id: employee.employeeId },
-        process.env.JWT_SECRET || 'your-secret-key',
-        { expiresIn: '1h' }
+        process.env.JWT_SECRET || "your-secret-key",
+        { expiresIn: "1h" }
       );
       employee.resetToken = resetToken;
       employee.resetTokenExpiration = Date.now() + 3600000;
@@ -475,96 +531,127 @@ module.exports = (transporter) => {
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: employee.email,
-        subject: 'Password Reset Request',
+        subject: "Password Reset Request",
         text: `You requested a password reset. Click this link to reset your password: ${resetUrl}. This link expires in 1 hour.`,
       };
 
       await transporter.sendMail(mailOptions);
-      console.log(`Reset email sent to ${employee.email} with token: ${resetToken}`);
-      res.status(200).json({ message: 'Reset link sent to your email' });
+      console.log(
+        `Reset email sent to ${employee.email} with token: ${resetToken}`
+      );
+      res.status(200).json({ message: "Reset link sent to your email" });
     } catch (error) {
       console.error("Error in forgot-password:", error);
-      res.status(500).json({ message: 'Server error', error: error.message });
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   });
 
-  router.post('/change-password', auth, async (req, res) => {
+  router.post("/change-password", auth, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
-  
+
       if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: 'All fields are required' });
+        return res.status(400).json({ message: "All fields are required" });
       }
-  
-      // Fetch employee from database using ID from the JWT
-      const employee = await Employee.findById(req.user.employeeId);
+
+      // Find employee using `employeeId` instead of `_id`
+      const employee = await Employee.findOne({
+        employeeId: req.user.employeeId,
+      });
       if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
+        return res.status(404).json({ message: "Employee not found" });
       }
-  
+
       // Compare the current password with the stored hash
       const isMatch = await bcrypt.compare(currentPassword, employee.password);
       if (!isMatch) {
-        return res.status(400).json({ message: 'Current password is incorrect' });
+        return res
+          .status(400)
+          .json({ message: "Current password is incorrect" });
       }
-  
+
       // Ensure new password is different
-      const isSamePassword = await bcrypt.compare(newPassword, employee.password);
+      const isSamePassword = await bcrypt.compare(
+        newPassword,
+        employee.password
+      );
       if (isSamePassword) {
-        return res.status(400).json({ message: 'New password must be different from the current password' });
+        return res
+          .status(400)
+          .json({
+            message: "New password must be different from the current password",
+          });
       }
-  
+
       // Hash the new password
-      const salt = await bcrypt.genSalt(10);
-      employee.password = await bcrypt.hash(newPassword, salt);
-  
+      employee.password = await bcrypt.hash(newPassword, 10);
+
       // Save the updated employee
       await employee.save();
-  
-      res.json({ message: 'Password updated successfully' });
-    } catch (error) {
-      console.error('Error changing password:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
 
-  router.patch('/profile/edit-no-auth', upload.single('photo'), async (req, res) => {
-    try {
-      const { firstName, middleName, lastName, email, phoneNumber, dob, dateOfJoining, gender, addressJson, employeeId } = req.body;
-      let parsedAddress = [];
-      if (addressJson) {
-        parsedAddress = typeof addressJson === 'string' ? JSON.parse(addressJson) : addressJson;
-      }
-      const updateData = {
-        firstName,
-        middleName,
-        lastName,
-        email,
-        phoneNumber,
-        dob,
-        dateOfJoining,
-        gender,
-        address: Array.isArray(parsedAddress) ? parsedAddress : [parsedAddress],
-        ...(req.file && { photo: req.file.path }),
-      };
-      const employee = await Employee.findOneAndUpdate(
-        { employeeId },
-        updateData,
-        { new: true, runValidators: true }
-      ).select('-password');
-      if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
-      }
-      res.json(employee);
+      res.json({ message: "Password updated successfully" });
     } catch (error) {
-      console.error('Error updating profile:', error);
-      if (error.name === 'ValidationError') {
-        return res.status(400).json({ message: error.message });
-      }
-      res.status(500).json({ message: 'Server error' });
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Server error" });
     }
   });
+
+  router.patch(
+    "/profile/edit-no-auth",
+    upload.single("photo"),
+    async (req, res) => {
+      try {
+        const {
+          firstName,
+          middleName,
+          lastName,
+          email,
+          phoneNumber,
+          dob,
+          dateOfJoining,
+          gender,
+          addressJson,
+          employeeId,
+        } = req.body;
+        let parsedAddress = [];
+        if (addressJson) {
+          parsedAddress =
+            typeof addressJson === "string"
+              ? JSON.parse(addressJson)
+              : addressJson;
+        }
+        const updateData = {
+          firstName,
+          middleName,
+          lastName,
+          email,
+          phoneNumber,
+          dob,
+          dateOfJoining,
+          gender,
+          address: Array.isArray(parsedAddress)
+            ? parsedAddress
+            : [parsedAddress],
+          ...(req.file && { photo: req.file.path }),
+        };
+        const employee = await Employee.findOneAndUpdate(
+          { employeeId },
+          updateData,
+          { new: true, runValidators: true }
+        ).select("-password");
+        if (!employee) {
+          return res.status(404).json({ message: "Employee not found" });
+        }
+        res.json(employee);
+      } catch (error) {
+        console.error("Error updating profile:", error);
+        if (error.name === "ValidationError") {
+          return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  );
 
   return router;
 };
